@@ -1,0 +1,74 @@
+<h2>3 approches pour la stack technique</h2>
+<p class="subtitle">Toutes tournent sur Cloudflare Pages + Workers + D1 + R2</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>React PWA + Hono + D1 + R2</h3>
+      <p><strong>Frontend :</strong> React + Vite (PWA) sur Cloudflare Pages<br>
+      <strong>Backend :</strong> Hono.js sur Cloudflare Workers (API REST)<br>
+      <strong>DB :</strong> Cloudflare D1 (SQLite)<br>
+      <strong>Fichiers :</strong> Cloudflare R2<br>
+      <strong>Auth :</strong> JWT custom + magic link email</p>
+      <div class="pros-cons" style="margin-top:0.75rem">
+        <div class="pros"><h4>Avantages</h4><ul>
+          <li>Frontend et backend bien séparés</li>
+          <li>React très répandu, facile à maintenir</li>
+          <li>Hono conçu spécifiquement pour CF Workers</li>
+        </ul></div>
+        <div class="cons"><h4>Inconvénients</h4><ul>
+          <li>Auth entièrement custom à coder</li>
+          <li>Deux projets à gérer (frontend + backend)</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B ⭐</div>
+    <div class="content">
+      <h3>SvelteKit + D1 + R2 <span style="color:#f59e0b; font-size:0.85rem">(Recommandé)</span></h3>
+      <p><strong>Full-stack :</strong> SvelteKit avec adaptateur Cloudflare natif<br>
+      <strong>DB :</strong> Cloudflare D1<br>
+      <strong>Fichiers :</strong> Cloudflare R2<br>
+      <strong>Auth :</strong> better-auth (email/password + magic link)</p>
+      <div class="pros-cons" style="margin-top:0.75rem">
+        <div class="pros"><h4>Avantages</h4><ul>
+          <li>Un seul projet — frontend + API dans le même dépôt</li>
+          <li>Adaptateur Cloudflare officiel, déploiement simple</li>
+          <li>better-auth gère magic link out-of-the-box</li>
+          <li>Moins de code à écrire</li>
+        </ul></div>
+        <div class="cons"><h4>Inconvénients</h4><ul>
+          <li>Svelte moins connu que React</li>
+          <li>Courbe d'apprentissage pour les nouveaux contributeurs React</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>React Router v7 (Remix) + D1 + R2</h3>
+      <p><strong>Full-stack :</strong> React Router v7 avec adaptateur Cloudflare<br>
+      <strong>DB :</strong> Cloudflare D1<br>
+      <strong>Fichiers :</strong> Cloudflare R2<br>
+      <strong>Auth :</strong> better-auth ou remix-auth</p>
+      <div class="pros-cons" style="margin-top:0.75rem">
+        <div class="pros"><h4>Avantages</h4><ul>
+          <li>React (familier) + full-stack en un seul projet</li>
+          <li>Patterns de chargement de données très propres</li>
+          <li>Adaptateur Cloudflare officiel</li>
+        </ul></div>
+        <div class="cons"><h4>Inconvénients</h4><ul>
+          <li>React Router v7/Remix en pleine évolution (API instable)</li>
+          <li>Plus verbeux que SvelteKit pour ce type d'app</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle" style="text-align:center; margin-top:1.5rem">Clique sur ton approche préférée ou réponds dans le terminal</p>
