@@ -51,7 +51,7 @@ CREATE TABLE badge_requests (
   proof_type TEXT NOT NULL CHECK(proof_type IN ('photo','video')),
   submitted_at INTEGER NOT NULL DEFAULT (unixepoch()),
   reviewed_at INTEGER,
-  reviewer_id TEXT REFERENCES users(id),
+  reviewer_id TEXT REFERENCES users(id) ON DELETE SET NULL,
   reviewer_comment TEXT
 );
 

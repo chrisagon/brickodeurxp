@@ -47,6 +47,13 @@ export type BadgeRequest = {
   reviewer_comment: string | null;
 };
 
+export type Session = {
+  id: string;
+  user_id: string;
+  token: string;
+  expires_at: number;
+};
+
 export async function getUserByEmail(db: D1Database, email: string): Promise<User | null> {
   const result = await db
     .prepare('SELECT id, email, role, nom, prenom, created_at FROM users WHERE email = ?')
@@ -75,13 +82,13 @@ export async function getUserById(db: D1Database, id: string): Promise<User | nu
 }
 
 export async function getAllDomains(db: D1Database): Promise<Domain[]> {
-  const result = await db.prepare('SELECT * FROM domains ORDER BY name').all<Domain>();
+  const result = await db.prepare('SELECT id, name, color, icon FROM domains ORDER BY name').all<Domain>();
   return result.results;
 }
 
 export async function getSkillsByDomain(db: D1Database, domainId: string): Promise<Skill[]> {
   const result = await db
-    .prepare('SELECT * FROM skills WHERE domain_id = ? AND active = 1 ORDER BY sort_order')
+    .prepare('SELECT id, domain_id, title, description, sort_order, active FROM skills WHERE domain_id = ? AND active = 1 ORDER BY sort_order')
     .bind(domainId)
     .all<Skill>();
   return result.results;
@@ -89,7 +96,7 @@ export async function getSkillsByDomain(db: D1Database, domainId: string): Promi
 
 export async function getBadgesByJeune(db: D1Database, jeuneId: string): Promise<Badge[]> {
   const result = await db
-    .prepare('SELECT * FROM badges WHERE jeune_id = ? ORDER BY awarded_at DESC')
+    .prepare('SELECT id, jeune_id, skill_id, request_id, awarded_at, level FROM badges WHERE jeune_id = ? ORDER BY awarded_at DESC')
     .bind(jeuneId)
     .all<Badge>();
   return result.results;
