@@ -1,0 +1,16 @@
+name = "brickodeurxp"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = ".svelte-kit/cloudflare"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "brickodeurxp"
+database_id = "placeholder"
+
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "brickodeurxp-proofs"
+
+[vars]
+APP_URL = "http://localhost:5173"
