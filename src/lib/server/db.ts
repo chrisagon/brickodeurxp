@@ -316,3 +316,23 @@ export async function getBadgeRequestsByJeune(
     .all<BadgeRequest>();
   return result.results;
 }
+
+export async function getChildrenByParent(db: D1Database, parentId: string): Promise<User[]> {
+  const result = await db
+    .prepare(
+      'SELECT u.id, u.email, u.role, u.nom, u.prenom, u.created_at FROM users u JOIN parent_child pc ON pc.child_id = u.id WHERE pc.parent_id = ?'
+    )
+    .bind(parentId)
+    .all<User>();
+  return result.results;
+}
+
+export async function getParentsByChild(db: D1Database, childId: string): Promise<User[]> {
+  const result = await db
+    .prepare(
+      'SELECT u.id, u.email, u.role, u.nom, u.prenom, u.created_at FROM users u JOIN parent_child pc ON pc.parent_id = u.id WHERE pc.child_id = ?'
+    )
+    .bind(childId)
+    .all<User>();
+  return result.results;
+}
