@@ -50,9 +50,9 @@
 
       <form method="POST" enctype="multipart/form-data" class="flex flex-col gap-4">
         <div>
-          <label class="block text-sm text-gray-400 mb-2">
+          <p class="block text-sm text-gray-400 mb-2">
             Photo ou vidéo de ta réalisation
-          </label>
+          </p>
           <label
             class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-700 rounded-xl cursor-pointer hover:border-orange-500 transition-colors bg-gray-800/50"
           >
@@ -77,7 +77,9 @@
         {#if previewUrl}
           <div class="rounded-lg overflow-hidden bg-gray-800 max-h-48">
             {#if isVideo}
-              <video src={previewUrl} controls class="w-full max-h-48 object-contain"></video>
+              <video src={previewUrl} controls class="w-full max-h-48 object-contain">
+                <track kind="captions" src="" label="Sous-titres" />
+              </video>
             {:else}
               <img src={previewUrl} alt="Aperçu" class="w-full max-h-48 object-contain" />
             {/if}
