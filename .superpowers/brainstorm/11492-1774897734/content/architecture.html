@@ -1,0 +1,80 @@
+<h2>Architecture — Section 1/4</h2>
+<p class="subtitle">SvelteKit PWA · Cloudflare Pages + Workers + D1 + R2</p>
+
+<div style="max-width: 750px; margin: 0 auto;">
+
+  <!-- Stack diagram -->
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+
+    <div style="background: rgba(249,115,22,0.12); border: 1px solid rgba(249,115,22,0.3); border-radius: 10px; padding: 1rem;">
+      <span class="label" style="color:#f97316">Cloudflare Pages</span>
+      <h3 style="margin:0.5rem 0 0.25rem">Frontend PWA</h3>
+      <ul style="margin:0; padding-left:1.2rem; font-size:0.85rem; color:#ccc">
+        <li>SvelteKit + Vite</li>
+        <li>@vite-pwa/sveltekit (service worker, manifest)</li>
+        <li>TailwindCSS</li>
+        <li>Installable iOS / Android</li>
+      </ul>
+    </div>
+
+    <div style="background: rgba(249,115,22,0.12); border: 1px solid rgba(249,115,22,0.3); border-radius: 10px; padding: 1rem;">
+      <span class="label" style="color:#f97316">Cloudflare Workers</span>
+      <h3 style="margin:0.5rem 0 0.25rem">API (SvelteKit SSR)</h3>
+      <ul style="margin:0; padding-left:1.2rem; font-size:0.85rem; color:#ccc">
+        <li>SvelteKit server routes (+server.ts)</li>
+        <li>better-auth (sessions, magic link)</li>
+        <li>Logique métier badges</li>
+      </ul>
+    </div>
+
+    <div style="background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.3); border-radius: 10px; padding: 1rem;">
+      <span class="label" style="color:#818cf8">Cloudflare D1</span>
+      <h3 style="margin:0.5rem 0 0.25rem">Base de données SQLite</h3>
+      <ul style="margin:0; padding-left:1.2rem; font-size:0.85rem; color:#ccc">
+        <li>Utilisateurs (jeunes, parents, animateurs)</li>
+        <li>Compétences + domaines</li>
+        <li>Badges & validations</li>
+        <li>Sessions auth</li>
+      </ul>
+    </div>
+
+    <div style="background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.3); border-radius: 10px; padding: 1rem;">
+      <span class="label" style="color:#818cf8">Cloudflare R2</span>
+      <h3 style="margin:0.5rem 0 0.25rem">Stockage fichiers</h3>
+      <ul style="margin:0; padding-left:1.2rem; font-size:0.85rem; color:#ccc">
+        <li>Photos de preuves</li>
+        <li>Vidéos de preuves</li>
+        <li>Accès sécurisé via URL signées</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Roles -->
+  <div style="background: rgba(255,255,255,0.04); border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1rem;">
+    <span class="label">4 rôles utilisateur</span>
+    <div style="display: grid; grid-template-columns: repeat(4,1fr); gap:0.75rem; margin-top: 0.75rem; text-align:center;">
+      <div>
+        <div style="font-size:1.75rem">👦</div>
+        <strong style="font-size:0.85rem">Jeune</strong>
+        <p style="font-size:0.75rem; color:#aaa; margin:0.2rem 0 0">Soumet preuves, voit ses badges</p>
+      </div>
+      <div>
+        <div style="font-size:1.75rem">👨‍🏫</div>
+        <strong style="font-size:0.85rem">Animateur</strong>
+        <p style="font-size:0.75rem; color:#aaa; margin:0.2rem 0 0">Valide/refuse, gère compétences</p>
+      </div>
+      <div>
+        <div style="font-size:1.75rem">👪</div>
+        <strong style="font-size:0.85rem">Parent</strong>
+        <p style="font-size:0.75rem; color:#aaa; margin:0.2rem 0 0">Consulte progression enfant</p>
+      </div>
+      <div>
+        <div style="font-size:1.75rem">🔧</div>
+        <strong style="font-size:0.85rem">Admin</strong>
+        <p style="font-size:0.75rem; color:#aaa; margin:0.2rem 0 0">Gère référentiel, animateurs</p>
+      </div>
+    </div>
+  </div>
+
+  <p class="subtitle" style="text-align:center">Est-ce que cette architecture te convient ? Réponds dans le terminal.</p>
+</div>

@@ -1,0 +1,98 @@
+<h2>Modèle de données — Section 2/4</h2>
+<p class="subtitle">Schéma simplifié des tables D1 (SQLite)</p>
+
+<div style="max-width: 780px; margin: 0 auto; font-size: 0.85rem;">
+
+  <!-- Row 1: Users -->
+  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+
+    <div style="background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); border-radius: 8px; padding: 0.85rem;">
+      <span class="label" style="color:#60a5fa">users</span>
+      <ul style="margin:0.5rem 0 0; padding-left:1rem; color:#ddd; line-height:1.8">
+        <li>id</li>
+        <li>email</li>
+        <li>password_hash</li>
+        <li>role <span style="color:#888">(jeune|animateur|parent|admin)</span></li>
+        <li>nom, prénom</li>
+        <li>created_at</li>
+      </ul>
+    </div>
+
+    <div style="background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); border-radius: 8px; padding: 0.85rem;">
+      <span class="label" style="color:#60a5fa">parent_child</span>
+      <ul style="margin:0.5rem 0 0; padding-left:1rem; color:#ddd; line-height:1.8">
+        <li>id</li>
+        <li>parent_id → users</li>
+        <li>child_id → users</li>
+      </ul>
+      <div style="margin-top:0.75rem; padding-top:0.75rem; border-top:1px solid rgba(255,255,255,0.1);">
+        <span class="label" style="color:#60a5fa">magic_links</span>
+        <ul style="margin:0.5rem 0 0; padding-left:1rem; color:#ddd; line-height:1.8">
+          <li>token</li>
+          <li>email</li>
+          <li>expires_at</li>
+          <li>used</li>
+        </ul>
+      </div>
+    </div>
+
+    <div style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); border-radius: 8px; padding: 0.85rem;">
+      <span class="label" style="color:#34d399">domains</span>
+      <ul style="margin:0.5rem 0 0; padding-left:1rem; color:#ddd; line-height:1.8">
+        <li>id</li>
+        <li>name <span style="color:#888">(Brick / Codeur)</span></li>
+        <li>color</li>
+        <li>icon</li>
+      </ul>
+      <div style="margin-top:0.75rem; padding-top:0.75rem; border-top:1px solid rgba(255,255,255,0.1);">
+        <span class="label" style="color:#34d399">skills</span>
+        <ul style="margin:0.5rem 0 0; padding-left:1rem; color:#ddd; line-height:1.8">
+          <li>id</li>
+          <li>domain_id → domains</li>
+          <li>title</li>
+          <li>description</li>
+          <li>level_required <span style="color:#888">(1–5)</span></li>
+          <li>active</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 2: Badges & Validations -->
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+
+    <div style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); border-radius: 8px; padding: 0.85rem;">
+      <span class="label" style="color:#fbbf24">badge_requests</span>
+      <ul style="margin:0.5rem 0 0; padding-left:1rem; color:#ddd; line-height:1.8">
+        <li>id</li>
+        <li>jeune_id → users</li>
+        <li>skill_id → skills</li>
+        <li>status <span style="color:#888">(pending|approved|rejected)</span></li>
+        <li>proof_url <span style="color:#888">(R2)</span></li>
+        <li>proof_type <span style="color:#888">(photo|video)</span></li>
+        <li>submitted_at</li>
+        <li>reviewed_at</li>
+        <li>reviewer_id → users</li>
+        <li>reviewer_comment</li>
+      </ul>
+    </div>
+
+    <div style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); border-radius: 8px; padding: 0.85rem;">
+      <span class="label" style="color:#fbbf24">badges</span>
+      <p style="color:#aaa; font-size:0.8rem; margin:0.4rem 0 0.5rem">Badge attribué = compétence validée</p>
+      <ul style="margin:0; padding-left:1rem; color:#ddd; line-height:1.8">
+        <li>id</li>
+        <li>jeune_id → users</li>
+        <li>skill_id → skills</li>
+        <li>request_id → badge_requests</li>
+        <li>awarded_at</li>
+        <li>level <span style="color:#888">(blanc|jaune|orange|rouge|noir)</span></li>
+      </ul>
+      <div style="margin-top:0.75rem; background:rgba(255,255,255,0.04); border-radius:6px; padding:0.5rem 0.75rem;">
+        <p style="margin:0; color:#aaa; font-size:0.8rem">💡 Le niveau est calculé automatiquement : nb de badges validés dans le domaine → 1=blanc, 2=jaune, 3=orange, 4=rouge, 5=noir</p>
+      </div>
+    </div>
+  </div>
+
+  <p class="subtitle" style="text-align:center">Ce modèle de données te convient ? Réponds dans le terminal.</p>
+</div>

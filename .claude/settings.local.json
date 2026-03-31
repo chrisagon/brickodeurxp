@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create:*)",
+      "Bash(npx sv:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(git -C /e/Applications/brickodeurxp show --stat ce11223)",
+      "Bash(npm test:*)"
+    ]
+  }
+}

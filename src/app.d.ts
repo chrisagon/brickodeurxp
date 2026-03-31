@@ -1,3 +1,4 @@
+/// <reference types="@cloudflare/workers-types" />
 import type { D1Database, R2Bucket } from '@cloudflare/workers-types';
 
 declare global {
@@ -18,8 +19,7 @@ declare global {
         DB: D1Database;
         R2: R2Bucket;
         RESEND_API_KEY: string;
-        BETTER_AUTH_SECRET: string;
-        APP_URL: string;
+APP_URL: string;
       };
     }
   }
