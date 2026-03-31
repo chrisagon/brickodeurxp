@@ -1,7 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { hashPassword, createSession } from '$lib/server/auth';
-import { getValidInvitation, markInvitationUsed, linkParentChild, getUserByEmail } from '$lib/server/db';
+import { getValidInvitation, getUserByEmail } from '$lib/server/db';
 
 export const load: PageServerLoad = async ({ url, platform }) => {
   const token = url.searchParams.get('token');
@@ -39,13 +39,18 @@ export const actions: Actions = {
     const password_hash = await hashPassword(password);
     const parentId = crypto.randomUUID();
 
-    await db
-      .prepare('INSERT INTO users (id, email, password_hash, role, nom, prenom) VALUES (?, ?, ?, ?, ?, ?)')
-      .bind(parentId, invitation.parent_email, password_hash, 'parent', nom, prenom)
-      .run();
-
-    await linkParentChild(db, parentId, invitation.child_id);
-    await markInvitationUsed(db, token);
+    try {
+      await db.batch([
+        db.prepare('INSERT INTO users (id, email, password_hash, role, nom, prenom) VALUES (?, ?, ?, ?, ?, ?)')
+          .bind(parentId, invitation.parent_email, password_hash, 'parent', nom, prenom),
+        db.prepare('INSERT OR IGNORE INTO parent_child (parent_id, child_id) VALUES (?, ?)')
+          .bind(parentId, invitation.child_id),
+        db.prepare('UPDATE parent_invitations SET used = 1 WHERE token = ?')
+          .bind(token),
+      ]);
+    } catch {
+      return fail(500, { error: 'Ce compte ne peut pas être créé. Veuillez contacter un animateur.' });
+    }
 
     const session = await createSession(db, parentId);
     cookies.set('session', session.token, {

@@ -34,7 +34,7 @@
                 {skill.active ? 'Actif' : 'Inactif'}
               </button>
             </form>
-            <form method="POST" action="?/deleteSkill">
+            <form method="POST" action="?/deactivateSkill">
               <input type="hidden" name="skill_id" value={skill.id} />
               <button type="submit"
                 class="text-xs px-2 py-1 rounded bg-red-900/30 text-red-400 hover:bg-red-900/60">

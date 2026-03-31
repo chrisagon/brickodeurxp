@@ -54,7 +54,7 @@ export const actions: Actions = {
     return { success: true };
   },
 
-  deleteSkill: async ({ request, platform }) => {
+  deactivateSkill: async ({ request, platform }) => {
     const data = await request.formData();
     const skill_id = String(data.get('skill_id') ?? '');
     if (!skill_id) return fail(400, { error: 'skill_id requis.' });

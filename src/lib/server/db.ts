@@ -47,7 +47,7 @@ export type BadgeRequest = {
   reviewer_comment: string | null;
 };
 
-export type Session = {
+export type DbSession = {
   id: string;
   user_id: string;
   token: string;
