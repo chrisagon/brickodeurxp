@@ -336,3 +336,135 @@ export async function getParentsByChild(db: D1Database, childId: string): Promis
     .all<User>();
   return result.results;
 }
+
+// ── Skill Proposals ──────────────────────────────────────────────────────────
+
+export type SkillProposal = {
+  id: string;
+  domain_id: string;
+  title: string;
+  description: string;
+  proposed_by: string;
+  status: 'pending' | 'approved' | 'rejected';
+  reviewer_id: string | null;
+  reviewer_note: string | null;
+  created_at: number;
+  reviewed_at: number | null;
+};
+
+export type SkillProposalWithMeta = SkillProposal & {
+  proposer_prenom: string;
+  proposer_nom: string;
+  domain_name: string;
+};
+
+export async function createSkillProposal(
+  db: D1Database,
+  proposedBy: string,
+  domainId: string,
+  title: string,
+  description: string
+): Promise<void> {
+  await db
+    .prepare(
+      'INSERT INTO skill_proposals (domain_id, title, description, proposed_by) VALUES (?, ?, ?, ?)'
+    )
+    .bind(domainId, title, description, proposedBy)
+    .run();
+}
+
+export async function getPendingProposals(db: D1Database): Promise<SkillProposalWithMeta[]> {
+  const result = await db
+    .prepare(
+      `SELECT sp.id, sp.domain_id, sp.title, sp.description, sp.proposed_by,
+              sp.status, sp.reviewer_id, sp.reviewer_note, sp.created_at, sp.reviewed_at,
+              u.prenom AS proposer_prenom, u.nom AS proposer_nom,
+              d.name AS domain_name
+       FROM skill_proposals sp
+       JOIN users u ON u.id = sp.proposed_by
+       JOIN domains d ON d.id = sp.domain_id
+       WHERE sp.status = 'pending'
+       ORDER BY sp.created_at ASC`
+    )
+    .all<SkillProposalWithMeta>();
+  return result.results;
+}
+
+export async function getProposalById(
+  db: D1Database,
+  proposalId: string
+): Promise<SkillProposalWithMeta | null> {
+  return db
+    .prepare(
+      `SELECT sp.id, sp.domain_id, sp.title, sp.description, sp.proposed_by,
+              sp.status, sp.reviewer_id, sp.reviewer_note, sp.created_at, sp.reviewed_at,
+              u.prenom AS proposer_prenom, u.nom AS proposer_nom,
+              d.name AS domain_name
+       FROM skill_proposals sp
+       JOIN users u ON u.id = sp.proposed_by
+       JOIN domains d ON d.id = sp.domain_id
+       WHERE sp.id = ?`
+    )
+    .bind(proposalId)
+    .first<SkillProposalWithMeta>();
+}
+
+export async function approveProposal(
+  db: D1Database,
+  proposalId: string,
+  reviewerId: string
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+
+  // Récupérer la proposition
+  const proposal = await db
+    .prepare('SELECT id, domain_id, title, description, status FROM skill_proposals WHERE id = ?')
+    .bind(proposalId)
+    .first<Pick<SkillProposal, 'id' | 'domain_id' | 'title' | 'description' | 'status'>>();
+
+  if (!proposal) throw new Error('Proposition introuvable');
+  if (proposal.status !== 'pending') throw new Error('Proposition déjà traitée');
+
+  // Calcul du prochain sort_order
+  const maxOrder = await db
+    .prepare('SELECT COALESCE(MAX(sort_order), -1) AS max_order FROM skills WHERE domain_id = ?')
+    .bind(proposal.domain_id)
+    .first<{ max_order: number }>();
+
+  const nextOrder = (maxOrder?.max_order ?? -1) + 1;
+
+  // Atomique : créer la compétence + marquer approuvée
+  await db.batch([
+    db
+      .prepare(
+        'INSERT INTO skills (domain_id, title, description, sort_order) VALUES (?, ?, ?, ?)'
+      )
+      .bind(proposal.domain_id, proposal.title, proposal.description, nextOrder),
+    db
+      .prepare(
+        'UPDATE skill_proposals SET status = ?, reviewer_id = ?, reviewed_at = ? WHERE id = ? AND status = ?'
+      )
+      .bind('approved', reviewerId, now, proposalId, 'pending'),
+  ]);
+}
+
+export async function rejectProposal(
+  db: D1Database,
+  proposalId: string,
+  reviewerId: string,
+  note: string
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  const result = await db
+    .prepare(
+      'UPDATE skill_proposals SET status = ?, reviewer_id = ?, reviewer_note = ?, reviewed_at = ? WHERE id = ? AND status = ?'
+    )
+    .bind('rejected', reviewerId, note || null, now, proposalId, 'pending')
+    .run();
+
+  if (result.meta.changes === 0) {
+    const p = await getProposalById(db, proposalId);
+    if (!p) throw new Error('Proposition introuvable');
+    throw new Error('Proposition déjà traitée');
+  }
+}
