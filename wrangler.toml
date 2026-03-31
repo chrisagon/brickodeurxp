@@ -14,3 +14,4 @@ bucket_name = "brickodeurxp-proofs"
 
 [vars]
 APP_URL = "http://localhost:5173"
+RESEND_FROM = "noreply@brickodeurs.fr"

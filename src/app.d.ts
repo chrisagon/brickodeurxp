@@ -19,7 +19,8 @@ declare global {
         DB: D1Database;
         R2: R2Bucket;
         RESEND_API_KEY: string;
-APP_URL: string;
+        RESEND_FROM: string;
+        APP_URL: string;
       };
     }
   }
