@@ -153,3 +153,155 @@ export async function linkParentChild(
     .bind(parentId, childId)
     .run();
 }
+
+export type PendingRequestRow = {
+  id: string;
+  proof_url: string;
+  proof_type: 'photo' | 'video';
+  submitted_at: number;
+  jeune_prenom: string;
+  jeune_nom: string;
+  skill_title: string;
+  skill_id: string;
+  domain_name: string;
+  domain_color: string;
+  domain_icon: string;
+};
+
+export async function getPendingRequests(db: D1Database): Promise<PendingRequestRow[]> {
+  const result = await db
+    .prepare(`
+      SELECT
+        br.id, br.proof_url, br.proof_type, br.submitted_at,
+        u.prenom AS jeune_prenom, u.nom AS jeune_nom,
+        s.title AS skill_title, s.id AS skill_id,
+        d.name AS domain_name, d.color AS domain_color, d.icon AS domain_icon
+      FROM badge_requests br
+      JOIN users u ON u.id = br.jeune_id
+      JOIN skills s ON s.id = br.skill_id
+      JOIN domains d ON d.id = s.domain_id
+      WHERE br.status = 'pending'
+      ORDER BY br.submitted_at ASC
+    `)
+    .all<PendingRequestRow>();
+  return result.results;
+}
+
+export async function createBadgeRequest(
+  db: D1Database,
+  jeuneId: string,
+  skillId: string,
+  proofUrl: string,
+  proofType: 'photo' | 'video'
+): Promise<string> {
+  const id = crypto.randomUUID();
+  await db
+    .prepare(
+      'INSERT INTO badge_requests (id, jeune_id, skill_id, proof_url, proof_type) VALUES (?, ?, ?, ?, ?)'
+    )
+    .bind(id, jeuneId, skillId, proofUrl, proofType)
+    .run();
+  return id;
+}
+
+export async function getRequestById(
+  db: D1Database,
+  requestId: string
+): Promise<BadgeRequest | null> {
+  const result = await db
+    .prepare(
+      'SELECT id, jeune_id, skill_id, status, proof_url, proof_type, submitted_at, reviewed_at, reviewer_id, reviewer_comment FROM badge_requests WHERE id = ?'
+    )
+    .bind(requestId)
+    .first<BadgeRequest>();
+  return result ?? null;
+}
+
+export async function approveRequest(
+  db: D1Database,
+  requestId: string,
+  reviewerId: string,
+  comment: string
+): Promise<Badge> {
+  const request = await getRequestById(db, requestId);
+  if (!request || request.status !== 'pending') {
+    throw new Error('Demande introuvable ou déjà traitée');
+  }
+
+  // Compter les badges existants du jeune dans ce domaine
+  const domainRow = await db
+    .prepare('SELECT d.id FROM domains d JOIN skills s ON s.domain_id = d.id WHERE s.id = ?')
+    .bind(request.skill_id)
+    .first<{ id: string }>();
+  if (!domainRow) throw new Error('Domaine introuvable');
+
+  const countRow = await db
+    .prepare(`
+      SELECT COUNT(*) AS count FROM badges b
+      JOIN skills s ON s.id = b.skill_id
+      WHERE b.jeune_id = ? AND s.domain_id = ?
+    `)
+    .bind(request.jeune_id, domainRow.id)
+    .first<{ count: number }>();
+
+  const newCount = (countRow?.count ?? 0) + 1;
+
+  // Calculer le niveau inline (pas d'import utils pour garder db.ts sans dépendances)
+  const LEVEL_MAP: [number, Badge['level']][] = [
+    [5, 'noir'], [4, 'rouge'], [3, 'orange'], [2, 'jaune'], [1, 'blanc'],
+  ];
+  const level = LEVEL_MAP.find(([t]) => newCount >= t)?.[1] ?? 'blanc';
+
+  const now = Math.floor(Date.now() / 1000);
+  const badgeId = crypto.randomUUID();
+
+  await db.batch([
+    db.prepare(
+      'UPDATE badge_requests SET status = ?, reviewer_id = ?, reviewer_comment = ?, reviewed_at = ? WHERE id = ?'
+    ).bind('approved', reviewerId, comment || null, now, requestId),
+    db.prepare(
+      'INSERT INTO badges (id, jeune_id, skill_id, request_id, awarded_at, level) VALUES (?, ?, ?, ?, ?, ?)'
+    ).bind(badgeId, request.jeune_id, request.skill_id, requestId, now, level),
+  ]);
+
+  return {
+    id: badgeId,
+    jeune_id: request.jeune_id,
+    skill_id: request.skill_id,
+    request_id: requestId,
+    awarded_at: now,
+    level,
+  };
+}
+
+export async function rejectRequest(
+  db: D1Database,
+  requestId: string,
+  reviewerId: string,
+  comment: string
+): Promise<void> {
+  const request = await getRequestById(db, requestId);
+  if (!request || request.status !== 'pending') {
+    throw new Error('Demande introuvable ou déjà traitée');
+  }
+  const now = Math.floor(Date.now() / 1000);
+  await db
+    .prepare(
+      'UPDATE badge_requests SET status = ?, reviewer_id = ?, reviewer_comment = ?, reviewed_at = ? WHERE id = ?'
+    )
+    .bind('rejected', reviewerId, comment || null, now, requestId)
+    .run();
+}
+
+export async function getBadgeRequestsByJeune(
+  db: D1Database,
+  jeuneId: string
+): Promise<BadgeRequest[]> {
+  const result = await db
+    .prepare(
+      'SELECT id, jeune_id, skill_id, status, proof_url, proof_type, submitted_at, reviewed_at, reviewer_id, reviewer_comment FROM badge_requests WHERE jeune_id = ? ORDER BY submitted_at DESC'
+    )
+    .bind(jeuneId)
+    .all<BadgeRequest>();
+  return result.results;
+}
