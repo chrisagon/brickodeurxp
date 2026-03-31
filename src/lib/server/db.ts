@@ -223,17 +223,31 @@ export async function approveRequest(
   reviewerId: string,
   comment: string
 ): Promise<Badge> {
-  const request = await getRequestById(db, requestId);
-  if (!request || request.status !== 'pending') {
-    throw new Error('Demande introuvable ou déjà traitée');
+  const now = Math.floor(Date.now() / 1000);
+
+  // UPDATE atomique — n'agit que si status='pending'
+  const updateResult = await db
+    .prepare(
+      'UPDATE badge_requests SET status = ?, reviewer_id = ?, reviewer_comment = ?, reviewed_at = ? WHERE id = ? AND status = ?'
+    )
+    .bind('approved', reviewerId, comment || null, now, requestId, 'pending')
+    .run();
+
+  if (updateResult.meta.changes === 0) {
+    const existing = await getRequestById(db, requestId);
+    if (!existing) throw new Error('Demande introuvable');
+    throw new Error('Demande déjà traitée');
   }
 
-  // Compter les badges existants du jeune dans ce domaine
+  // Lire les données nécessaires pour créer le badge
+  const request = await getRequestById(db, requestId);
+  if (!request) throw new Error('Demande introuvable après approbation');
+
   const domainRow = await db
     .prepare('SELECT d.id FROM domains d JOIN skills s ON s.domain_id = d.id WHERE s.id = ?')
     .bind(request.skill_id)
     .first<{ id: string }>();
-  if (!domainRow) throw new Error('Domaine introuvable');
+  if (!domainRow) throw new Error('Domaine introuvable pour skill_id: ' + request.skill_id);
 
   const countRow = await db
     .prepare(`
@@ -246,23 +260,18 @@ export async function approveRequest(
 
   const newCount = (countRow?.count ?? 0) + 1;
 
-  // Calculer le niveau inline (pas d'import utils pour garder db.ts sans dépendances)
   const LEVEL_MAP: [number, Badge['level']][] = [
     [5, 'noir'], [4, 'rouge'], [3, 'orange'], [2, 'jaune'], [1, 'blanc'],
   ];
   const level = LEVEL_MAP.find(([t]) => newCount >= t)?.[1] ?? 'blanc';
 
-  const now = Math.floor(Date.now() / 1000);
   const badgeId = crypto.randomUUID();
-
-  await db.batch([
-    db.prepare(
-      'UPDATE badge_requests SET status = ?, reviewer_id = ?, reviewer_comment = ?, reviewed_at = ? WHERE id = ?'
-    ).bind('approved', reviewerId, comment || null, now, requestId),
-    db.prepare(
+  await db
+    .prepare(
       'INSERT INTO badges (id, jeune_id, skill_id, request_id, awarded_at, level) VALUES (?, ?, ?, ?, ?, ?)'
-    ).bind(badgeId, request.jeune_id, request.skill_id, requestId, now, level),
-  ]);
+    )
+    .bind(badgeId, request.jeune_id, request.skill_id, requestId, now, level)
+    .run();
 
   return {
     id: badgeId,
@@ -280,17 +289,19 @@ export async function rejectRequest(
   reviewerId: string,
   comment: string
 ): Promise<void> {
-  const request = await getRequestById(db, requestId);
-  if (!request || request.status !== 'pending') {
-    throw new Error('Demande introuvable ou déjà traitée');
-  }
   const now = Math.floor(Date.now() / 1000);
-  await db
+  const updateResult = await db
     .prepare(
-      'UPDATE badge_requests SET status = ?, reviewer_id = ?, reviewer_comment = ?, reviewed_at = ? WHERE id = ?'
+      'UPDATE badge_requests SET status = ?, reviewer_id = ?, reviewer_comment = ?, reviewed_at = ? WHERE id = ? AND status = ?'
     )
-    .bind('rejected', reviewerId, comment || null, now, requestId)
+    .bind('rejected', reviewerId, comment || null, now, requestId, 'pending')
     .run();
+
+  if (updateResult.meta.changes === 0) {
+    const existing = await getRequestById(db, requestId);
+    if (!existing) throw new Error('Demande introuvable');
+    throw new Error('Demande déjà traitée');
+  }
 }
 
 export async function getBadgeRequestsByJeune(
