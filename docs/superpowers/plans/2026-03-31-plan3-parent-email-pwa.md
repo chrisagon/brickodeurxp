@@ -325,6 +325,7 @@ git commit -m "feat: portail parent — vue lecture seule des passeports enfants
 - [ ] **Step 3.1 : Ajouter `RESEND_FROM` à `src/app.d.ts`**
 
 Dans `src/app.d.ts`, dans le bloc `interface Platform { env: { ... } }`, ajouter la ligne `RESEND_FROM?: string;` après `RESEND_API_KEY: string;`.
+RESEND_API_KEY=re_We8J3fF1_b3d6GHnQTsFHAuNxiNX5dMyA
 
 Le bloc Platform complet après modification :
 
