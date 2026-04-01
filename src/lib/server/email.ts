@@ -96,3 +96,34 @@ export function buildBadgeNotificationEmail(params: {
 </html>`,
   };
 }
+
+export function buildAnimateurInvitationEmail(params: {
+  inviteEmail: string;
+  inviteLink: string;
+  appUrl: string;
+}): EmailPayload {
+  const { inviteEmail, inviteLink, appUrl } = params;
+  return {
+    to: inviteEmail,
+    subject: 'Invitation animateur — Brickodeurs',
+    html: `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"></head>
+<body style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#1f2937;background:#fff">
+  <h1 style="color:#f97316;font-size:22px;margin-bottom:8px">🧱 Brickodeurs</h1>
+  <p>Bonjour,</p>
+  <p>Vous avez été invité(e) à rejoindre le club <strong>Brickodeurs</strong> en tant qu'<strong>animateur</strong>.</p>
+  <p>Cliquez sur le lien ci-dessous pour créer votre compte :</p>
+  <p style="text-align:center;margin:32px 0">
+    <a href="${inviteLink}"
+       style="background:#f97316;color:#fff;text-decoration:none;padding:14px 28px;border-radius:8px;font-weight:bold;display:inline-block">
+      Créer mon compte animateur
+    </a>
+  </p>
+  <p style="color:#6b7280;font-size:12px">Ce lien est valide 7 jours. Si vous n'attendiez pas cet email, ignorez-le.</p>
+  <p style="color:#6b7280;font-size:12px"><a href="${appUrl}" style="color:#6b7280">${appUrl}</a></p>
+</body>
+</html>`,
+  };
+}

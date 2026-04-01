@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { ActionData } from './$types';
+  import { page } from '$app/stores';
   let { form } = $props<{ form: ActionData }>();
 </script>
 
@@ -11,6 +12,12 @@
 
   {#if form?.error}
     <p class="mb-4 p-3 bg-red-900/40 text-red-300 rounded-lg text-sm">{form.error}</p>
+  {/if}
+
+  {#if $page.url.searchParams.get('invited')}
+    <div class="mb-4 p-3 bg-green-900/30 border border-green-700 rounded-lg text-green-300 text-sm">
+      ✅ Compte créé avec succès ! Connectez-vous avec vos identifiants.
+    </div>
   {/if}
 
   <form method="POST" class="flex flex-col gap-4">
