@@ -468,3 +468,80 @@ export async function rejectProposal(
     throw new Error('Proposition déjà traitée');
   }
 }
+
+
+// ── Animateur Invitations ────────────────────────────────────────────────────
+
+export type AnimateurInvitation = {
+  id: string;
+  email: string;
+  token: string;
+  invited_by: string;
+  created_at: number;
+  expires_at: number;
+  used_at: number | null;
+};
+
+export async function createAnimateurInvitation(
+  db: D1Database,
+  email: string,
+  invitedBy: string
+): Promise<AnimateurInvitation> {
+  const now = Math.floor(Date.now() / 1000);
+  const expires = now + 7 * 24 * 3600;
+
+  // Invalider les invitations non utilisées existantes pour cet email
+  await db
+    .prepare('UPDATE animateur_invitations SET used_at = ? WHERE email = ? AND used_at IS NULL')
+    .bind(now, email)
+    .run();
+
+  const inv = await db
+    .prepare(
+      `INSERT INTO animateur_invitations (email, invited_by, expires_at)
+       VALUES (?, ?, ?)
+       RETURNING id, email, token, invited_by, created_at, expires_at, used_at`
+    )
+    .bind(email, invitedBy, expires)
+    .first<AnimateurInvitation>();
+
+  if (!inv) throw new Error("Échec de la création de l'invitation");
+  return inv;
+}
+
+export async function getValidAnimateurInvitation(
+  db: D1Database,
+  token: string
+): Promise<AnimateurInvitation | null> {
+  const now = Math.floor(Date.now() / 1000);
+  return db
+    .prepare(
+      'SELECT id, email, token, invited_by, created_at, expires_at, used_at FROM animateur_invitations WHERE token = ? AND used_at IS NULL AND expires_at > ?'
+    )
+    .bind(token, now)
+    .first<AnimateurInvitation>();
+}
+
+export async function markAnimateurInvitationUsed(
+  db: D1Database,
+  token: string
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await db
+    .prepare('UPDATE animateur_invitations SET used_at = ? WHERE token = ?')
+    .bind(now, token)
+    .run();
+}
+
+export async function getPendingAnimateurInvitations(
+  db: D1Database
+): Promise<AnimateurInvitation[]> {
+  const now = Math.floor(Date.now() / 1000);
+  const result = await db
+    .prepare(
+      'SELECT id, email, token, invited_by, created_at, expires_at, used_at FROM animateur_invitations WHERE used_at IS NULL AND expires_at > ? ORDER BY created_at DESC'
+    )
+    .bind(now)
+    .all<AnimateurInvitation>();
+  return result.results;
+}
