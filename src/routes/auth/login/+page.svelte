@@ -3,8 +3,11 @@
   let { form } = $props<{ form: ActionData }>();
 </script>
 
-<div class="max-w-md mx-auto mt-16 p-6 bg-gray-900 rounded-xl">
-  <h1 class="text-2xl font-bold text-orange-400 mb-6">Connexion Brickodeurs</h1>
+<div class="max-w-md mx-auto mt-8 p-6 bg-gray-900 rounded-xl">
+  <div class="flex flex-col items-center mb-6">
+    <img src="/logo.png" alt="Brickodeurs" class="w-28 h-auto mb-3 drop-shadow-lg" />
+    <h1 class="text-2xl font-bold text-orange-400">Connexion Brickodeurs</h1>
+  </div>
 
   {#if form?.error}
     <p class="mb-4 p-3 bg-red-900/40 text-red-300 rounded-lg text-sm">{form.error}</p>
