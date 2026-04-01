@@ -545,3 +545,95 @@ export async function getPendingAnimateurInvitations(
     .all<AnimateurInvitation>();
   return result.results;
 }
+
+// ── Messages ─────────────────────────────────────────────────────────────────
+
+export type Message = {
+  id: string;
+  from_id: string;
+  to_id: string;
+  content: string;
+  created_at: number;
+  read_at: number | null;
+};
+
+export type MessageWithSender = Message & {
+  sender_prenom: string;
+  sender_nom: string;
+};
+
+export async function getConversation(
+  db: D1Database,
+  userId: string,
+  otherId: string
+): Promise<MessageWithSender[]> {
+  const result = await db
+    .prepare(
+      `SELECT m.id, m.from_id, m.to_id, m.content, m.created_at, m.read_at,
+              u.prenom AS sender_prenom, u.nom AS sender_nom
+       FROM messages m
+       JOIN users u ON u.id = m.from_id
+       WHERE (m.from_id = ? AND m.to_id = ?)
+          OR (m.from_id = ? AND m.to_id = ?)
+       ORDER BY m.created_at ASC`
+    )
+    .bind(userId, otherId, otherId, userId)
+    .all<MessageWithSender>();
+  return result.results;
+}
+
+export async function sendMessage(
+  db: D1Database,
+  fromId: string,
+  toId: string,
+  content: string
+): Promise<void> {
+  await db
+    .prepare('INSERT INTO messages (from_id, to_id, content) VALUES (?, ?, ?)')
+    .bind(fromId, toId, content)
+    .run();
+}
+
+export async function markConversationRead(
+  db: D1Database,
+  toId: string,
+  fromId: string
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await db
+    .prepare('UPDATE messages SET read_at = ? WHERE to_id = ? AND from_id = ? AND read_at IS NULL')
+    .bind(now, toId, fromId)
+    .run();
+}
+
+export async function getUnreadCounts(
+  db: D1Database,
+  userId: string
+): Promise<Record<string, number>> {
+  const result = await db
+    .prepare(
+      `SELECT from_id, COUNT(*) AS cnt
+       FROM messages
+       WHERE to_id = ? AND read_at IS NULL
+       GROUP BY from_id`
+    )
+    .bind(userId)
+    .all<{ from_id: string; cnt: number }>();
+  return Object.fromEntries(result.results.map((r) => [r.from_id, r.cnt]));
+}
+
+export async function getDirectoryUsers(
+  db: D1Database,
+  excludeId: string
+): Promise<User[]> {
+  const result = await db
+    .prepare(
+      `SELECT id, email, role, nom, prenom, created_at
+       FROM users
+       WHERE id != ? AND role IN ('jeune', 'animateur')
+       ORDER BY role, nom, prenom`
+    )
+    .bind(excludeId)
+    .all<User>();
+  return result.results;
+}
