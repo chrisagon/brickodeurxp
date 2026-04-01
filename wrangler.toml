@@ -6,11 +6,12 @@ pages_build_output_dir = ".svelte-kit/cloudflare"
 [[d1_databases]]
 binding = "DB"
 database_name = "brickodeurxp"
-database_id = "placeholder"
+database_id = "bab15364-e2d9-42bd-b0f4-2e7eaf2a62fb"
 
 [[r2_buckets]]
 binding = "R2"
 bucket_name = "brickodeurxp-proofs"
 
 [vars]
-APP_URL = "http://localhost:5173"
+APP_URL = "https://brickodeurxp.pages.dev"
+RESEND_FROM = "noreply@brickodeurs.fr"

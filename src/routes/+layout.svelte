@@ -1,9 +1,24 @@
 <script lang="ts">
   import '../app.css';
   import type { LayoutData } from './$types';
+  import { browser } from '$app/environment';
 
   let { data, children } = $props();
+
+  $effect(() => {
+    if (browser && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+  });
 </script>
+
+<svelte:head>
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#f97316" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+</svelte:head>
 
 <div class="min-h-screen bg-gray-950 text-gray-100">
   {#if data.session}

@@ -2,6 +2,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import type { Actions } from './$types';
 import { hashPassword, createSession } from '$lib/server/auth';
 import { getUserByEmail, createParentInvitation } from '$lib/server/db';
+import { sendEmail, buildInvitationEmail } from '$lib/server/email';
 
 export const actions: Actions = {
   default: async ({ request, platform, cookies }) => {
@@ -41,6 +42,22 @@ export const actions: Actions = {
     // In dev: log the invitation link (Plan 3 will send it via Resend)
     const appUrl = platform!.env.APP_URL ?? 'http://localhost:5173';
     console.log(`[DEV] Lien invitation parent: ${appUrl}/auth/magic?token=${inviteToken}`);
+
+    // Envoi de l'email d'invitation au parent (best-effort — ne bloque pas l'inscription)
+    const magicLink = `${appUrl}/auth/magic?token=${inviteToken}&email=${encodeURIComponent(parent_email)}`;
+    const emailPayload = buildInvitationEmail({
+      parentName: parent_email,
+      childName: `${prenom} ${nom}`,
+      magicLink,
+      appUrl,
+    });
+    emailPayload.to = parent_email;
+    try {
+      await sendEmail(platform!.env.RESEND_API_KEY, platform!.env.RESEND_FROM, emailPayload);
+    } catch (err) {
+      console.error('Failed to send invitation email:', err);
+      // Ne pas bloquer l'inscription
+    }
 
     const session = await createSession(db, userId);
     cookies.set('session', session.token, {

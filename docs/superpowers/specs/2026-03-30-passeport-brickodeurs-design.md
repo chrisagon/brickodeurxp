@@ -226,7 +226,7 @@ Après validation d'une compétence, l'animateur peut générer le badge physiqu
 | Compte animateur créé | Animateur |
 
 Envoi via **Resend** (SDK compatible Cloudflare Workers, support `fetch` natif, tier gratuit généreux).
-
+clé API Resend : re_We8J3fF1_b3d6GHnQTsFHAuNxiNX5dMyA
 ---
 
 ## Vérification (tests end-to-end)

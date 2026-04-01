@@ -153,3 +153,487 @@ export async function linkParentChild(
     .bind(parentId, childId)
     .run();
 }
+
+export type PendingRequestRow = {
+  id: string;
+  proof_url: string;
+  proof_type: 'photo' | 'video';
+  submitted_at: number;
+  jeune_prenom: string;
+  jeune_nom: string;
+  skill_title: string;
+  skill_id: string;
+  domain_name: string;
+  domain_color: string;
+  domain_icon: string;
+};
+
+export async function getPendingRequests(db: D1Database): Promise<PendingRequestRow[]> {
+  const result = await db
+    .prepare(`
+      SELECT
+        br.id, br.proof_url, br.proof_type, br.submitted_at,
+        u.prenom AS jeune_prenom, u.nom AS jeune_nom,
+        s.title AS skill_title, s.id AS skill_id,
+        d.name AS domain_name, d.color AS domain_color, d.icon AS domain_icon
+      FROM badge_requests br
+      JOIN users u ON u.id = br.jeune_id
+      JOIN skills s ON s.id = br.skill_id
+      JOIN domains d ON d.id = s.domain_id
+      WHERE br.status = 'pending'
+      ORDER BY br.submitted_at ASC
+    `)
+    .all<PendingRequestRow>();
+  return result.results;
+}
+
+export async function createBadgeRequest(
+  db: D1Database,
+  jeuneId: string,
+  skillId: string,
+  proofUrl: string,
+  proofType: 'photo' | 'video'
+): Promise<string> {
+  const id = crypto.randomUUID();
+  await db
+    .prepare(
+      'INSERT INTO badge_requests (id, jeune_id, skill_id, proof_url, proof_type) VALUES (?, ?, ?, ?, ?)'
+    )
+    .bind(id, jeuneId, skillId, proofUrl, proofType)
+    .run();
+  return id;
+}
+
+export async function getRequestById(
+  db: D1Database,
+  requestId: string
+): Promise<BadgeRequest | null> {
+  const result = await db
+    .prepare(
+      'SELECT id, jeune_id, skill_id, status, proof_url, proof_type, submitted_at, reviewed_at, reviewer_id, reviewer_comment FROM badge_requests WHERE id = ?'
+    )
+    .bind(requestId)
+    .first<BadgeRequest>();
+  return result ?? null;
+}
+
+export async function approveRequest(
+  db: D1Database,
+  requestId: string,
+  reviewerId: string,
+  comment: string
+): Promise<Badge> {
+  const now = Math.floor(Date.now() / 1000);
+
+  // UPDATE atomique — n'agit que si status='pending'
+  const updateResult = await db
+    .prepare(
+      'UPDATE badge_requests SET status = ?, reviewer_id = ?, reviewer_comment = ?, reviewed_at = ? WHERE id = ? AND status = ?'
+    )
+    .bind('approved', reviewerId, comment || null, now, requestId, 'pending')
+    .run();
+
+  if (updateResult.meta.changes === 0) {
+    const existing = await getRequestById(db, requestId);
+    if (!existing) throw new Error('Demande introuvable');
+    throw new Error('Demande déjà traitée');
+  }
+
+  // Lire les données nécessaires pour créer le badge
+  const request = await getRequestById(db, requestId);
+  if (!request) throw new Error('Demande introuvable après approbation');
+
+  const domainRow = await db
+    .prepare('SELECT d.id FROM domains d JOIN skills s ON s.domain_id = d.id WHERE s.id = ?')
+    .bind(request.skill_id)
+    .first<{ id: string }>();
+  if (!domainRow) throw new Error('Domaine introuvable pour skill_id: ' + request.skill_id);
+
+  const countRow = await db
+    .prepare(`
+      SELECT COUNT(*) AS count FROM badges b
+      JOIN skills s ON s.id = b.skill_id
+      WHERE b.jeune_id = ? AND s.domain_id = ?
+    `)
+    .bind(request.jeune_id, domainRow.id)
+    .first<{ count: number }>();
+
+  const newCount = (countRow?.count ?? 0) + 1;
+
+  const LEVEL_MAP: [number, Badge['level']][] = [
+    [5, 'noir'], [4, 'rouge'], [3, 'orange'], [2, 'jaune'], [1, 'blanc'],
+  ];
+  const level = LEVEL_MAP.find(([t]) => newCount >= t)?.[1] ?? 'blanc';
+
+  const badgeId = crypto.randomUUID();
+  await db
+    .prepare(
+      'INSERT INTO badges (id, jeune_id, skill_id, request_id, awarded_at, level) VALUES (?, ?, ?, ?, ?, ?)'
+    )
+    .bind(badgeId, request.jeune_id, request.skill_id, requestId, now, level)
+    .run();
+
+  return {
+    id: badgeId,
+    jeune_id: request.jeune_id,
+    skill_id: request.skill_id,
+    request_id: requestId,
+    awarded_at: now,
+    level,
+  };
+}
+
+export async function rejectRequest(
+  db: D1Database,
+  requestId: string,
+  reviewerId: string,
+  comment: string
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  const updateResult = await db
+    .prepare(
+      'UPDATE badge_requests SET status = ?, reviewer_id = ?, reviewer_comment = ?, reviewed_at = ? WHERE id = ? AND status = ?'
+    )
+    .bind('rejected', reviewerId, comment || null, now, requestId, 'pending')
+    .run();
+
+  if (updateResult.meta.changes === 0) {
+    const existing = await getRequestById(db, requestId);
+    if (!existing) throw new Error('Demande introuvable');
+    throw new Error('Demande déjà traitée');
+  }
+}
+
+export async function getBadgeRequestsByJeune(
+  db: D1Database,
+  jeuneId: string
+): Promise<BadgeRequest[]> {
+  const result = await db
+    .prepare(
+      'SELECT id, jeune_id, skill_id, status, proof_url, proof_type, submitted_at, reviewed_at, reviewer_id, reviewer_comment FROM badge_requests WHERE jeune_id = ? ORDER BY submitted_at DESC'
+    )
+    .bind(jeuneId)
+    .all<BadgeRequest>();
+  return result.results;
+}
+
+export async function getChildrenByParent(db: D1Database, parentId: string): Promise<User[]> {
+  const result = await db
+    .prepare(
+      'SELECT u.id, u.email, u.role, u.nom, u.prenom, u.created_at FROM users u JOIN parent_child pc ON pc.child_id = u.id WHERE pc.parent_id = ?'
+    )
+    .bind(parentId)
+    .all<User>();
+  return result.results;
+}
+
+export async function getParentsByChild(db: D1Database, childId: string): Promise<User[]> {
+  const result = await db
+    .prepare(
+      'SELECT u.id, u.email, u.role, u.nom, u.prenom, u.created_at FROM users u JOIN parent_child pc ON pc.parent_id = u.id WHERE pc.child_id = ?'
+    )
+    .bind(childId)
+    .all<User>();
+  return result.results;
+}
+
+// ── Skill Proposals ──────────────────────────────────────────────────────────
+
+export type SkillProposal = {
+  id: string;
+  domain_id: string;
+  title: string;
+  description: string;
+  proposed_by: string;
+  status: 'pending' | 'approved' | 'rejected';
+  reviewer_id: string | null;
+  reviewer_note: string | null;
+  created_at: number;
+  reviewed_at: number | null;
+};
+
+export type SkillProposalWithMeta = SkillProposal & {
+  proposer_prenom: string;
+  proposer_nom: string;
+  domain_name: string;
+};
+
+export async function createSkillProposal(
+  db: D1Database,
+  proposedBy: string,
+  domainId: string,
+  title: string,
+  description: string
+): Promise<void> {
+  await db
+    .prepare(
+      'INSERT INTO skill_proposals (domain_id, title, description, proposed_by) VALUES (?, ?, ?, ?)'
+    )
+    .bind(domainId, title, description, proposedBy)
+    .run();
+}
+
+export async function getPendingProposals(db: D1Database): Promise<SkillProposalWithMeta[]> {
+  const result = await db
+    .prepare(
+      `SELECT sp.id, sp.domain_id, sp.title, sp.description, sp.proposed_by,
+              sp.status, sp.reviewer_id, sp.reviewer_note, sp.created_at, sp.reviewed_at,
+              u.prenom AS proposer_prenom, u.nom AS proposer_nom,
+              d.name AS domain_name
+       FROM skill_proposals sp
+       JOIN users u ON u.id = sp.proposed_by
+       JOIN domains d ON d.id = sp.domain_id
+       WHERE sp.status = 'pending'
+       ORDER BY sp.created_at ASC`
+    )
+    .all<SkillProposalWithMeta>();
+  return result.results;
+}
+
+export async function getProposalById(
+  db: D1Database,
+  proposalId: string
+): Promise<SkillProposalWithMeta | null> {
+  return db
+    .prepare(
+      `SELECT sp.id, sp.domain_id, sp.title, sp.description, sp.proposed_by,
+              sp.status, sp.reviewer_id, sp.reviewer_note, sp.created_at, sp.reviewed_at,
+              u.prenom AS proposer_prenom, u.nom AS proposer_nom,
+              d.name AS domain_name
+       FROM skill_proposals sp
+       JOIN users u ON u.id = sp.proposed_by
+       JOIN domains d ON d.id = sp.domain_id
+       WHERE sp.id = ?`
+    )
+    .bind(proposalId)
+    .first<SkillProposalWithMeta>();
+}
+
+export async function approveProposal(
+  db: D1Database,
+  proposalId: string,
+  reviewerId: string
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+
+  // Récupérer la proposition
+  const proposal = await db
+    .prepare('SELECT id, domain_id, title, description, status FROM skill_proposals WHERE id = ?')
+    .bind(proposalId)
+    .first<Pick<SkillProposal, 'id' | 'domain_id' | 'title' | 'description' | 'status'>>();
+
+  if (!proposal) throw new Error('Proposition introuvable');
+  if (proposal.status !== 'pending') throw new Error('Proposition déjà traitée');
+
+  // Calcul du prochain sort_order
+  const maxOrder = await db
+    .prepare('SELECT COALESCE(MAX(sort_order), -1) AS max_order FROM skills WHERE domain_id = ?')
+    .bind(proposal.domain_id)
+    .first<{ max_order: number }>();
+
+  const nextOrder = (maxOrder?.max_order ?? -1) + 1;
+
+  // Atomique : créer la compétence + marquer approuvée
+  await db.batch([
+    db
+      .prepare(
+        'INSERT INTO skills (domain_id, title, description, sort_order) VALUES (?, ?, ?, ?)'
+      )
+      .bind(proposal.domain_id, proposal.title, proposal.description, nextOrder),
+    db
+      .prepare(
+        'UPDATE skill_proposals SET status = ?, reviewer_id = ?, reviewed_at = ? WHERE id = ? AND status = ?'
+      )
+      .bind('approved', reviewerId, now, proposalId, 'pending'),
+  ]);
+}
+
+export async function rejectProposal(
+  db: D1Database,
+  proposalId: string,
+  reviewerId: string,
+  note: string
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  const result = await db
+    .prepare(
+      'UPDATE skill_proposals SET status = ?, reviewer_id = ?, reviewer_note = ?, reviewed_at = ? WHERE id = ? AND status = ?'
+    )
+    .bind('rejected', reviewerId, note || null, now, proposalId, 'pending')
+    .run();
+
+  if (result.meta.changes === 0) {
+    const p = await getProposalById(db, proposalId);
+    if (!p) throw new Error('Proposition introuvable');
+    throw new Error('Proposition déjà traitée');
+  }
+}
+
+
+// ── Animateur Invitations ────────────────────────────────────────────────────
+
+export type AnimateurInvitation = {
+  id: string;
+  email: string;
+  token: string;
+  invited_by: string;
+  created_at: number;
+  expires_at: number;
+  used_at: number | null;
+};
+
+export async function createAnimateurInvitation(
+  db: D1Database,
+  email: string,
+  invitedBy: string
+): Promise<AnimateurInvitation> {
+  const now = Math.floor(Date.now() / 1000);
+  const expires = now + 7 * 24 * 3600;
+
+  // Invalider les invitations non utilisées existantes pour cet email
+  await db
+    .prepare('UPDATE animateur_invitations SET used_at = ? WHERE email = ? AND used_at IS NULL')
+    .bind(now, email)
+    .run();
+
+  const inv = await db
+    .prepare(
+      `INSERT INTO animateur_invitations (email, invited_by, expires_at)
+       VALUES (?, ?, ?)
+       RETURNING id, email, token, invited_by, created_at, expires_at, used_at`
+    )
+    .bind(email, invitedBy, expires)
+    .first<AnimateurInvitation>();
+
+  if (!inv) throw new Error("Échec de la création de l'invitation");
+  return inv;
+}
+
+export async function getValidAnimateurInvitation(
+  db: D1Database,
+  token: string
+): Promise<AnimateurInvitation | null> {
+  const now = Math.floor(Date.now() / 1000);
+  return db
+    .prepare(
+      'SELECT id, email, token, invited_by, created_at, expires_at, used_at FROM animateur_invitations WHERE token = ? AND used_at IS NULL AND expires_at > ?'
+    )
+    .bind(token, now)
+    .first<AnimateurInvitation>();
+}
+
+export async function markAnimateurInvitationUsed(
+  db: D1Database,
+  token: string
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await db
+    .prepare('UPDATE animateur_invitations SET used_at = ? WHERE token = ?')
+    .bind(now, token)
+    .run();
+}
+
+export async function getPendingAnimateurInvitations(
+  db: D1Database
+): Promise<AnimateurInvitation[]> {
+  const now = Math.floor(Date.now() / 1000);
+  const result = await db
+    .prepare(
+      'SELECT id, email, token, invited_by, created_at, expires_at, used_at FROM animateur_invitations WHERE used_at IS NULL AND expires_at > ? ORDER BY created_at DESC'
+    )
+    .bind(now)
+    .all<AnimateurInvitation>();
+  return result.results;
+}
+
+// ── Messages ─────────────────────────────────────────────────────────────────
+
+export type Message = {
+  id: string;
+  from_id: string;
+  to_id: string;
+  content: string;
+  created_at: number;
+  read_at: number | null;
+};
+
+export type MessageWithSender = Message & {
+  sender_prenom: string;
+  sender_nom: string;
+};
+
+export async function getConversation(
+  db: D1Database,
+  userId: string,
+  otherId: string
+): Promise<MessageWithSender[]> {
+  const result = await db
+    .prepare(
+      `SELECT m.id, m.from_id, m.to_id, m.content, m.created_at, m.read_at,
+              u.prenom AS sender_prenom, u.nom AS sender_nom
+       FROM messages m
+       JOIN users u ON u.id = m.from_id
+       WHERE (m.from_id = ? AND m.to_id = ?)
+          OR (m.from_id = ? AND m.to_id = ?)
+       ORDER BY m.created_at ASC`
+    )
+    .bind(userId, otherId, otherId, userId)
+    .all<MessageWithSender>();
+  return result.results;
+}
+
+export async function sendMessage(
+  db: D1Database,
+  fromId: string,
+  toId: string,
+  content: string
+): Promise<void> {
+  await db
+    .prepare('INSERT INTO messages (from_id, to_id, content) VALUES (?, ?, ?)')
+    .bind(fromId, toId, content)
+    .run();
+}
+
+export async function markConversationRead(
+  db: D1Database,
+  toId: string,
+  fromId: string
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await db
+    .prepare('UPDATE messages SET read_at = ? WHERE to_id = ? AND from_id = ? AND read_at IS NULL')
+    .bind(now, toId, fromId)
+    .run();
+}
+
+export async function getUnreadCounts(
+  db: D1Database,
+  userId: string
+): Promise<Record<string, number>> {
+  const result = await db
+    .prepare(
+      `SELECT from_id, COUNT(*) AS cnt
+       FROM messages
+       WHERE to_id = ? AND read_at IS NULL
+       GROUP BY from_id`
+    )
+    .bind(userId)
+    .all<{ from_id: string; cnt: number }>();
+  return Object.fromEntries(result.results.map((r) => [r.from_id, r.cnt]));
+}
+
+export async function getDirectoryUsers(
+  db: D1Database,
+  excludeId: string
+): Promise<User[]> {
+  const result = await db
+    .prepare(
+      `SELECT id, email, role, nom, prenom, created_at
+       FROM users
+       WHERE id != ? AND role IN ('jeune', 'animateur')
+       ORDER BY role, nom, prenom`
+    )
+    .bind(excludeId)
+    .all<User>();
+  return result.results;
+}
