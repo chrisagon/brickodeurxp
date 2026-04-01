@@ -14,4 +14,4 @@ bucket_name = "brickodeurxp-proofs"
 
 [vars]
 APP_URL = "https://brickodeurxp.pages.dev"
-RESEND_FROM = "Brickodeurs <noreply@hrconseil.net>"
+RESEND_FROM = "BrickodeurXP <noreply@brickodeurs.fr>"
