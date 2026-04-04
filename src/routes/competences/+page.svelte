@@ -86,15 +86,13 @@
                 {/if}
               </div>
               <div class="flex gap-2 shrink-0">
-                {#if isAdmin}
-                  <button
-                    type="button"
-                    onclick={() => startEdit(skill)}
-                    class="text-xs px-2 py-1 rounded bg-gray-800 text-gray-400 hover:text-orange-400 transition-colors"
-                  >
-                    Modifier
-                  </button>
-                {/if}
+                <button
+                  type="button"
+                  onclick={() => startEdit(skill)}
+                  class="text-xs px-2 py-1 rounded bg-gray-800 text-gray-400 hover:text-orange-400 transition-colors"
+                >
+                  Modifier
+                </button>
                 <form method="POST" action="?/toggleSkill"
                   onsubmit={(e) => {
                     if (skill.active && !confirm(`Désactiver "${skill.title}" ?\n\nLa compétence ne sera plus visible pour les jeunes.`)) {

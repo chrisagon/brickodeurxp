@@ -41,7 +41,8 @@ export const actions: Actions = {
   },
 
   editSkill: async ({ request, platform, locals }) => {
-    if (locals.session?.user.role !== 'admin') error(403, 'Réservé à l\'administrateur.');
+    const role = locals.session?.user.role;
+    if (role !== 'admin' && role !== 'animateur') error(403, 'Accès non autorisé.');
 
     const data = await request.formData();
     const skill_id = String(data.get('skill_id') ?? '').trim();
