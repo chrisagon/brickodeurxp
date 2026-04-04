@@ -32,6 +32,23 @@ export type Badge = {
   request_id: string;
   awarded_at: number;
   level: 'blanc' | 'jaune' | 'orange' | 'rouge' | 'noir';
+  printed_by: string | null;
+  printed_at: number | null;
+};
+
+export type BadgePrintRow = {
+  id: string;
+  awarded_at: number;
+  level: 'blanc' | 'jaune' | 'orange' | 'rouge' | 'noir';
+  jeune_prenom: string;
+  jeune_nom: string;
+  skill_title: string;
+  domain_name: string;
+  domain_color: string;
+  printed_by: string | null;
+  printed_at: number | null;
+  printer_prenom: string | null;
+  printer_nom: string | null;
 };
 
 export type BadgeRequest = {
@@ -104,10 +121,42 @@ export async function getAllSkillsByDomain(db: D1Database, domainId: string): Pr
 
 export async function getBadgesByJeune(db: D1Database, jeuneId: string): Promise<Badge[]> {
   const result = await db
-    .prepare('SELECT id, jeune_id, skill_id, request_id, awarded_at, level FROM badges WHERE jeune_id = ? ORDER BY awarded_at DESC')
+    .prepare('SELECT id, jeune_id, skill_id, request_id, awarded_at, level, printed_by, printed_at FROM badges WHERE jeune_id = ? ORDER BY awarded_at DESC')
     .bind(jeuneId)
     .all<Badge>();
   return result.results;
+}
+
+export async function getBadgesForPrinting(db: D1Database): Promise<BadgePrintRow[]> {
+  const result = await db
+    .prepare(`
+      SELECT
+        b.id, b.awarded_at, b.level, b.printed_by, b.printed_at,
+        j.prenom AS jeune_prenom, j.nom AS jeune_nom,
+        s.title AS skill_title,
+        d.name AS domain_name, d.color AS domain_color,
+        p.prenom AS printer_prenom, p.nom AS printer_nom
+      FROM badges b
+      JOIN users j ON j.id = b.jeune_id
+      JOIN skills s ON s.id = b.skill_id
+      JOIN domains d ON d.id = s.domain_id
+      LEFT JOIN users p ON p.id = b.printed_by
+      ORDER BY b.printed_by IS NOT NULL, b.awarded_at DESC
+    `)
+    .all<BadgePrintRow>();
+  return result.results;
+}
+
+export async function markBadgePrinted(
+  db: D1Database,
+  badgeId: string,
+  printerId: string
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await db
+    .prepare('UPDATE badges SET printed_by = ?, printed_at = ? WHERE id = ?')
+    .bind(printerId, now, badgeId)
+    .run();
 }
 
 export async function createParentInvitation(

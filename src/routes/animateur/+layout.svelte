@@ -7,6 +7,7 @@
     <a href="/animateur/validations" class="text-sm text-gray-400 hover:text-orange-400">Validations</a>
     <a href="/competences"           class="text-sm text-gray-400 hover:text-orange-400">Compétences</a>
     <a href="/animateur/proposer"    class="text-sm text-gray-400 hover:text-orange-400">Proposer une compétence</a>
+    <a href="/animateur/impression"  class="text-sm text-gray-400 hover:text-orange-400">Impression badges</a>
     <a href="/animateur/annuaire"    class="text-sm text-gray-400 hover:text-orange-400">Annuaire &amp; Messages</a>
   </nav>
   {@render children()}
