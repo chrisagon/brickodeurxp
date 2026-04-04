@@ -10,7 +10,7 @@
     {
       "name": "Wrangler Pages Dev (D1 + R2 locaux)",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["wrangler", "pages", "dev", "--port", "8788"],
+      "runtimeArgs": ["wrangler", "pages", "dev", "--port", "8788", "--persist-to", ".wrangler/state"],
       "port": 8788
     },
     {

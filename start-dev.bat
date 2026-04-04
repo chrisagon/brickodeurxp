@@ -25,6 +25,6 @@ echo.
 echo  Ctrl+C pour arreter le serveur.
 echo.
 
-npx wrangler pages dev --port 8788
+npx wrangler pages dev --port 8788 --persist-to .wrangler/state
 
 pause
