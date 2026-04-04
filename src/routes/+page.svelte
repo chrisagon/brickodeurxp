@@ -113,20 +113,15 @@
   <h2 class="text-2xl font-bold text-center text-white mb-8">Les niveaux de ceinture</h2>
   <div class="flex flex-wrap justify-center gap-3">
     {#each [
-      { level: 'Blanc',  color: '#f1f5f9', text: '#1e293b', badges: 1 },
-      { level: 'Jaune',  color: '#eab308', text: '#fff',    badges: 2 },
-      { level: 'Orange', color: '#f97316', text: '#fff',    badges: 3 },
-      { level: 'Rouge',  color: '#ef4444', text: '#fff',    badges: 4 },
-      { level: 'Noir',   color: '#1f2937', text: '#fff',    badges: 5 },
+      { label: 'Blanc',  image: '/hexa_blanc.png',  badges: 1 },
+      { label: 'Jaune',  image: '/hexa_jaune.png',  badges: 2 },
+      { label: 'Orange', image: '/hexa_orange.png', badges: 3 },
+      { label: 'Vert',   image: '/hexa_vert.png',   badges: 4 },
+      { label: 'Noir',   image: '/hexa_noir.png',   badges: 5 },
     ] as belt}
       <div class="flex flex-col items-center gap-2 w-24">
-        <div
-          class="w-16 h-16 rounded-full flex items-center justify-center font-black text-lg shadow-lg border-2 border-gray-700"
-          style="background:{belt.color}; color:{belt.text}"
-        >
-          {belt.level.charAt(0)}
-        </div>
-        <span class="text-sm font-semibold text-gray-300">{belt.level}</span>
+        <img src={belt.image} alt={belt.label} class="w-16 h-16 object-contain drop-shadow-lg" />
+        <span class="text-sm font-semibold text-gray-300">{belt.label}</span>
         <span class="text-xs text-gray-500">{belt.badges} badge{belt.badges > 1 ? 's' : ''}</span>
       </div>
     {/each}

@@ -18,13 +18,8 @@
           <h2 class="text-lg font-bold">{dp.domain.name}</h2>
         </div>
         <div class="flex items-center gap-2">
-          {#if dp.level}
-            <span
-              class="text-xs font-bold px-3 py-1 rounded-full border"
-              style="background:{dp.levelColor}; color:{dp.level === 'blanc' ? '#333' : '#fff'}; border-color:{dp.levelColor}"
-            >
-              {dp.level.toUpperCase()}
-            </span>
+          {#if dp.levelImage}
+            <img src={dp.levelImage} alt={dp.level ?? ''} class="w-9 h-9 object-contain drop-shadow" />
           {/if}
           <span class="text-xs text-gray-500">{dp.badgeCount}/5 badges</span>
         </div>
@@ -44,12 +39,12 @@
           <div class="flex items-center justify-between px-3 py-2.5 rounded-lg
             {skill.hasBadge ? 'bg-gray-800/50' : 'bg-gray-800/20'}">
             <div class="flex items-center gap-2">
-              {#if skill.hasBadge}
-                <span class="text-green-400 text-sm">✓</span>
+              {#if skill.hasBadge && skill.badgeImage}
+                <img src={skill.badgeImage} alt={skill.badgeLevel ?? 'badge'} class="w-7 h-7 object-contain" />
               {:else if skill.pendingRequest}
-                <span class="text-yellow-400 text-sm">⏳</span>
+                <span class="text-yellow-400 text-sm w-7 text-center">⏳</span>
               {:else}
-                <span class="text-gray-600 text-sm">○</span>
+                <span class="text-gray-600 text-sm w-7 text-center">○</span>
               {/if}
               <div>
                 <p class="text-sm font-medium {skill.hasBadge ? 'text-gray-200' : 'text-gray-400'}">

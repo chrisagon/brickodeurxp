@@ -4,8 +4,24 @@ export const LEVEL_COLORS: Record<Level, string> = {
   blanc:  '#ffffff',
   jaune:  '#ffd700',
   orange: '#f97316',
-  rouge:  '#dc2626',
+  rouge:  '#22c55e',
   noir:   '#111111',
+};
+
+export const LEVEL_LABELS: Record<Level, string> = {
+  blanc:  'Blanc',
+  jaune:  'Jaune',
+  orange: 'Orange',
+  rouge:  'Vert',
+  noir:   'Noir',
+};
+
+export const LEVEL_IMAGES: Record<Level, string> = {
+  blanc:  '/hexa_blanc.png',
+  jaune:  '/hexa_jaune.png',
+  orange: '/hexa_orange.png',
+  rouge:  '/hexa_vert.png',
+  noir:   '/hexa_noir.png',
 };
 
 const THRESHOLDS: [number, Level][] = [
