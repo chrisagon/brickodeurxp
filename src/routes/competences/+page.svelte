@@ -73,9 +73,14 @@
             </form>
           {:else}
             <!-- Affichage normal -->
-            <div class="flex items-center justify-between gap-4">
+            <div class="flex items-center justify-between gap-4 {!skill.active ? 'opacity-50' : ''}">
               <div>
-                <p class="font-medium text-sm">{skill.title}</p>
+                <div class="flex items-center gap-2">
+                  <p class="font-medium text-sm {!skill.active ? 'line-through text-gray-500' : ''}">{skill.title}</p>
+                  {#if !skill.active}
+                    <span class="text-xs bg-gray-800 text-gray-500 px-1.5 py-0.5 rounded">Inactive</span>
+                  {/if}
+                </div>
                 {#if skill.description}
                   <p class="text-xs text-gray-500 mt-0.5">{skill.description}</p>
                 {/if}

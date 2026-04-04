@@ -94,6 +94,14 @@ export async function getSkillsByDomain(db: D1Database, domainId: string): Promi
   return result.results;
 }
 
+export async function getAllSkillsByDomain(db: D1Database, domainId: string): Promise<Skill[]> {
+  const result = await db
+    .prepare('SELECT id, domain_id, title, description, sort_order, active FROM skills WHERE domain_id = ? ORDER BY sort_order')
+    .bind(domainId)
+    .all<Skill>();
+  return result.results;
+}
+
 export async function getBadgesByJeune(db: D1Database, jeuneId: string): Promise<Badge[]> {
   const result = await db
     .prepare('SELECT id, jeune_id, skill_id, request_id, awarded_at, level FROM badges WHERE jeune_id = ? ORDER BY awarded_at DESC')

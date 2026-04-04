@@ -1,6 +1,6 @@
 import { fail, error } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { getAllDomains, getSkillsByDomain } from '$lib/server/db';
+import { getAllDomains, getAllSkillsByDomain } from '$lib/server/db';
 import type { Skill } from '$lib/server/db';
 
 export const load: PageServerLoad = async ({ platform, locals }) => {
@@ -9,7 +9,7 @@ export const load: PageServerLoad = async ({ platform, locals }) => {
   const skillsByDomain: Record<string, Skill[]> = {};
 
   for (const domain of domains) {
-    skillsByDomain[domain.id] = await getSkillsByDomain(db, domain.id);
+    skillsByDomain[domain.id] = await getAllSkillsByDomain(db, domain.id);
   }
 
   return { domains, skillsByDomain, role: locals.session!.user.role };
