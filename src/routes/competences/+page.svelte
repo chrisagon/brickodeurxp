@@ -90,7 +90,13 @@
                     Modifier
                   </button>
                 {/if}
-                <form method="POST" action="?/toggleSkill">
+                <form method="POST" action="?/toggleSkill"
+                  onsubmit={(e) => {
+                    if (skill.active && !confirm(`Désactiver "${skill.title}" ?\n\nLa compétence ne sera plus visible pour les jeunes.`)) {
+                      e.preventDefault();
+                    }
+                  }}
+                >
                   <input type="hidden" name="skill_id" value={skill.id} />
                   <input type="hidden" name="active" value={skill.active} />
                   <button
@@ -102,7 +108,13 @@
                     {skill.active ? 'Actif' : 'Inactif'}
                   </button>
                 </form>
-                <form method="POST" action="?/deactivateSkill">
+                <form method="POST" action="?/deactivateSkill"
+                  onsubmit={(e) => {
+                    if (!confirm(`Retirer définitivement "${skill.title}" ?\n\nLa compétence sera masquée pour tous.`)) {
+                      e.preventDefault();
+                    }
+                  }}
+                >
                   <input type="hidden" name="skill_id" value={skill.id} />
                   <button
                     type="submit"
