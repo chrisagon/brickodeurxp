@@ -1,12 +1,12 @@
 -- Seed local dev — comptes de test
--- Mots de passe : Admin1234! / Anim1234! / Jeune1234!
+-- Mot de passe commun : Brickodeurs1!
 -- À NE PAS appliquer en production
 
 INSERT OR IGNORE INTO users (id, email, password_hash, role, nom, prenom, created_at) VALUES
-  ('user-admin-1',  'admin@test.fr',    '$2b$12$NJyfY9c7pWDlCdidPTZq9.Uh9ED766xA76VrggpTQbASTohJYPEzO', 'admin',     'Admin',    'Test',   unixepoch()),
-  ('user-anim-1',   'anim@test.fr',     '$2b$12$rOqCqCNAwZJJHxADpk0E5.PFt6k107Xtn5HTtwax8mVX2jpTyef8W', 'animateur', 'Animateur','Test',   unixepoch()),
-  ('user-jeune-1',  'jeune@test.fr',    '$2b$12$3vDGcKY/BCdGjULhzrOa9uR15VAYq7HNCsVp60nhiol.bGEu2v786', 'jeune',     'Jeune',    'Test',   unixepoch()),
-  ('user-parent-1', 'parent@test.fr',   '$2b$12$3vDGcKY/BCdGjULhzrOa9uR15VAYq7HNCsVp60nhiol.bGEu2v786', 'parent',    'Parent',   'Test',   unixepoch());
+  ('user-admin-1',  'admin@test.fr',    '$2b$10$rglQMQFo0omKElpsYvntbudmchgW57REYpMo2NhOe5Ry0okcAXeay', 'admin',     'Admin',    'Test',   unixepoch()),
+  ('user-anim-1',   'anim@test.fr',     '$2b$10$rglQMQFo0omKElpsYvntbudmchgW57REYpMo2NhOe5Ry0okcAXeay', 'animateur', 'Animateur','Test',   unixepoch()),
+  ('user-jeune-1',  'jeune@test.fr',    '$2b$10$rglQMQFo0omKElpsYvntbudmchgW57REYpMo2NhOe5Ry0okcAXeay', 'jeune',     'Jeune',    'Test',   unixepoch()),
+  ('user-parent-1', 'parent@test.fr',   '$2b$10$rglQMQFo0omKElpsYvntbudmchgW57REYpMo2NhOe5Ry0okcAXeay', 'parent',    'Parent',   'Test',   unixepoch());
 
 -- Lien parent ↔ enfant
 INSERT OR IGNORE INTO parent_child (parent_id, child_id) VALUES
