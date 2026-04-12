@@ -16,9 +16,18 @@ export type Domain = {
   icon: string;
 };
 
+export type Category = {
+  id: string;
+  domain_id: string;
+  name: string;
+  description: string;
+  sort_order: number;
+};
+
 export type Skill = {
   id: string;
   domain_id: string;
+  category_id: string | null;
   title: string;
   description: string;
   sort_order: number;
@@ -28,7 +37,7 @@ export type Skill = {
 export type Badge = {
   id: string;
   jeune_id: string;
-  skill_id: string;
+  category_id: string;
   request_id: string;
   awarded_at: number;
   level: 'blanc' | 'jaune' | 'orange' | 'rouge' | 'noir';
@@ -42,7 +51,7 @@ export type BadgePrintRow = {
   level: 'blanc' | 'jaune' | 'orange' | 'rouge' | 'noir';
   jeune_prenom: string;
   jeune_nom: string;
-  skill_title: string;
+  category_name: string;
   domain_name: string;
   domain_color: string;
   printed_by: string | null;
@@ -62,6 +71,9 @@ export type BadgeRequest = {
   reviewed_at: number | null;
   reviewer_id: string | null;
   reviewer_comment: string | null;
+  jeune_comment: string | null;
+  project_url: string | null;
+  project_type: string | null;
 };
 
 export type DbSession = {
@@ -103,9 +115,89 @@ export async function getAllDomains(db: D1Database): Promise<Domain[]> {
   return result.results;
 }
 
+export async function createDomain(
+  db: D1Database,
+  name: string,
+  color: string,
+  icon: string
+): Promise<Domain> {
+  const domain = await db
+    .prepare('INSERT INTO domains (name, color, icon) VALUES (?, ?, ?) RETURNING id, name, color, icon')
+    .bind(name, color, icon)
+    .first<Domain>();
+  if (!domain) throw new Error('Échec création domaine');
+  return domain;
+}
+
+export async function updateDomain(
+  db: D1Database,
+  id: string,
+  name: string,
+  color: string,
+  icon: string
+): Promise<void> {
+  await db
+    .prepare('UPDATE domains SET name = ?, color = ?, icon = ? WHERE id = ?')
+    .bind(name, color, icon, id)
+    .run();
+}
+
+// ── Categories ────────────────────────────────────────────────────────────────
+
+export async function getCategoriesByDomain(db: D1Database, domainId: string): Promise<Category[]> {
+  const result = await db
+    .prepare('SELECT id, domain_id, name, description, sort_order FROM categories WHERE domain_id = ? ORDER BY sort_order')
+    .bind(domainId)
+    .all<Category>();
+  return result.results;
+}
+
+export async function createCategory(
+  db: D1Database,
+  domainId: string,
+  name: string,
+  description: string
+): Promise<Category> {
+  const maxOrder = await db
+    .prepare('SELECT COALESCE(MAX(sort_order), -1) AS max_order FROM categories WHERE domain_id = ?')
+    .bind(domainId)
+    .first<{ max_order: number }>();
+  const nextOrder = (maxOrder?.max_order ?? -1) + 1;
+
+  const cat = await db
+    .prepare(
+      'INSERT INTO categories (domain_id, name, description, sort_order) VALUES (?, ?, ?, ?) RETURNING id, domain_id, name, description, sort_order'
+    )
+    .bind(domainId, name, description, nextOrder)
+    .first<Category>();
+
+  if (!cat) throw new Error('Échec de la création de la catégorie');
+  return cat;
+}
+
+export async function updateCategory(
+  db: D1Database,
+  id: string,
+  name: string,
+  description: string
+): Promise<void> {
+  await db
+    .prepare('UPDATE categories SET name = ?, description = ? WHERE id = ?')
+    .bind(name, description, id)
+    .run();
+}
+
+export async function deleteCategory(db: D1Database, id: string): Promise<void> {
+  // Désassigner les compétences avant suppression
+  await db.prepare('UPDATE skills SET category_id = NULL WHERE category_id = ?').bind(id).run();
+  await db.prepare('DELETE FROM categories WHERE id = ?').bind(id).run();
+}
+
+// ── Skills ────────────────────────────────────────────────────────────────────
+
 export async function getSkillsByDomain(db: D1Database, domainId: string): Promise<Skill[]> {
   const result = await db
-    .prepare('SELECT id, domain_id, title, description, sort_order, active FROM skills WHERE domain_id = ? AND active = 1 ORDER BY sort_order')
+    .prepare('SELECT id, domain_id, category_id, title, description, sort_order, active FROM skills WHERE domain_id = ? AND active = 1 ORDER BY sort_order')
     .bind(domainId)
     .all<Skill>();
   return result.results;
@@ -113,18 +205,51 @@ export async function getSkillsByDomain(db: D1Database, domainId: string): Promi
 
 export async function getAllSkillsByDomain(db: D1Database, domainId: string): Promise<Skill[]> {
   const result = await db
-    .prepare('SELECT id, domain_id, title, description, sort_order, active FROM skills WHERE domain_id = ? ORDER BY sort_order')
+    .prepare('SELECT id, domain_id, category_id, title, description, sort_order, active FROM skills WHERE domain_id = ? ORDER BY sort_order')
     .bind(domainId)
     .all<Skill>();
   return result.results;
 }
 
+export async function getSkillsByCategory(db: D1Database, categoryId: string): Promise<Skill[]> {
+  const result = await db
+    .prepare('SELECT id, domain_id, category_id, title, description, sort_order, active FROM skills WHERE category_id = ? AND active = 1 ORDER BY sort_order')
+    .bind(categoryId)
+    .all<Skill>();
+  return result.results;
+}
+
+export async function assignSkillToCategory(
+  db: D1Database,
+  skillId: string,
+  categoryId: string | null
+): Promise<void> {
+  await db
+    .prepare('UPDATE skills SET category_id = ? WHERE id = ?')
+    .bind(categoryId, skillId)
+    .run();
+}
+
+// ── Badges ────────────────────────────────────────────────────────────────────
+
 export async function getBadgesByJeune(db: D1Database, jeuneId: string): Promise<Badge[]> {
   const result = await db
-    .prepare('SELECT id, jeune_id, skill_id, request_id, awarded_at, level, printed_by, printed_at FROM badges WHERE jeune_id = ? ORDER BY awarded_at DESC')
+    .prepare('SELECT id, jeune_id, category_id, request_id, awarded_at, level, printed_by, printed_at FROM badges WHERE jeune_id = ? ORDER BY awarded_at DESC')
     .bind(jeuneId)
     .all<Badge>();
   return result.results;
+}
+
+export async function getCategoryBadge(
+  db: D1Database,
+  jeuneId: string,
+  categoryId: string
+): Promise<Badge | null> {
+  const result = await db
+    .prepare('SELECT id, jeune_id, category_id, request_id, awarded_at, level, printed_by, printed_at FROM badges WHERE jeune_id = ? AND category_id = ?')
+    .bind(jeuneId, categoryId)
+    .first<Badge>();
+  return result ?? null;
 }
 
 export async function getBadgesForPrinting(db: D1Database): Promise<BadgePrintRow[]> {
@@ -133,13 +258,13 @@ export async function getBadgesForPrinting(db: D1Database): Promise<BadgePrintRo
       SELECT
         b.id, b.awarded_at, b.level, b.printed_by, b.printed_at,
         j.prenom AS jeune_prenom, j.nom AS jeune_nom,
-        s.title AS skill_title,
+        c.name AS category_name,
         d.name AS domain_name, d.color AS domain_color,
         p.prenom AS printer_prenom, p.nom AS printer_nom
       FROM badges b
       JOIN users j ON j.id = b.jeune_id
-      JOIN skills s ON s.id = b.skill_id
-      JOIN domains d ON d.id = s.domain_id
+      JOIN categories c ON c.id = b.category_id
+      JOIN domains d ON d.id = c.domain_id
       LEFT JOIN users p ON p.id = b.printed_by
       ORDER BY b.printed_by IS NOT NULL, b.awarded_at DESC
     `)
@@ -158,6 +283,8 @@ export async function markBadgePrinted(
     .bind(printerId, now, badgeId)
     .run();
 }
+
+// ── Parent Invitations ────────────────────────────────────────────────────────
 
 export async function createParentInvitation(
   db: D1Database,
@@ -211,8 +338,11 @@ export async function linkParentChild(
     .run();
 }
 
+// ── Badge Requests ────────────────────────────────────────────────────────────
+
 export type PendingRequestRow = {
   id: string;
+  jeune_id: string;
   proof_url: string;
   proof_type: 'photo' | 'video';
   submitted_at: number;
@@ -220,23 +350,31 @@ export type PendingRequestRow = {
   jeune_nom: string;
   skill_title: string;
   skill_id: string;
+  category_id: string | null;
+  category_name: string | null;
   domain_name: string;
   domain_color: string;
   domain_icon: string;
+  jeune_comment: string | null;
+  project_url: string | null;
+  project_type: string | null;
 };
 
 export async function getPendingRequests(db: D1Database): Promise<PendingRequestRow[]> {
   const result = await db
     .prepare(`
       SELECT
-        br.id, br.proof_url, br.proof_type, br.submitted_at,
+        br.id, br.jeune_id, br.proof_url, br.proof_type, br.submitted_at,
+        br.jeune_comment, br.project_url, br.project_type,
         u.prenom AS jeune_prenom, u.nom AS jeune_nom,
-        s.title AS skill_title, s.id AS skill_id,
+        s.title AS skill_title, s.id AS skill_id, s.category_id,
+        c.name AS category_name,
         d.name AS domain_name, d.color AS domain_color, d.icon AS domain_icon
       FROM badge_requests br
       JOIN users u ON u.id = br.jeune_id
       JOIN skills s ON s.id = br.skill_id
       JOIN domains d ON d.id = s.domain_id
+      LEFT JOIN categories c ON c.id = s.category_id
       WHERE br.status = 'pending'
       ORDER BY br.submitted_at ASC
     `)
@@ -249,14 +387,17 @@ export async function createBadgeRequest(
   jeuneId: string,
   skillId: string,
   proofUrl: string,
-  proofType: 'photo' | 'video'
+  proofType: 'photo' | 'video',
+  jeuneComment: string | null = null,
+  projectUrl: string | null = null,
+  projectType: string | null = null
 ): Promise<string> {
   const id = crypto.randomUUID();
   await db
     .prepare(
-      'INSERT INTO badge_requests (id, jeune_id, skill_id, proof_url, proof_type) VALUES (?, ?, ?, ?, ?)'
+      'INSERT INTO badge_requests (id, jeune_id, skill_id, proof_url, proof_type, jeune_comment, project_url, project_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
     )
-    .bind(id, jeuneId, skillId, proofUrl, proofType)
+    .bind(id, jeuneId, skillId, proofUrl, proofType, jeuneComment, projectUrl, projectType)
     .run();
   return id;
 }
@@ -267,19 +408,23 @@ export async function getRequestById(
 ): Promise<BadgeRequest | null> {
   const result = await db
     .prepare(
-      'SELECT id, jeune_id, skill_id, status, proof_url, proof_type, submitted_at, reviewed_at, reviewer_id, reviewer_comment FROM badge_requests WHERE id = ?'
+      'SELECT id, jeune_id, skill_id, status, proof_url, proof_type, submitted_at, reviewed_at, reviewer_id, reviewer_comment, jeune_comment, project_url, project_type FROM badge_requests WHERE id = ?'
     )
     .bind(requestId)
     .first<BadgeRequest>();
   return result ?? null;
 }
 
+const LEVEL_MAP: [number, Badge['level']][] = [
+  [5, 'noir'], [4, 'rouge'], [3, 'orange'], [2, 'jaune'], [1, 'blanc'],
+];
+
 export async function approveRequest(
   db: D1Database,
   requestId: string,
   reviewerId: string,
   comment: string
-): Promise<Badge> {
+): Promise<Badge | null> {
   const now = Math.floor(Date.now() / 1000);
 
   // UPDATE atomique — n'agit que si status='pending'
@@ -296,47 +441,82 @@ export async function approveRequest(
     throw new Error('Demande déjà traitée');
   }
 
-  // Lire les données nécessaires pour créer le badge
   const request = await getRequestById(db, requestId);
   if (!request) throw new Error('Demande introuvable après approbation');
 
-  const domainRow = await db
-    .prepare('SELECT d.id FROM domains d JOIN skills s ON s.domain_id = d.id WHERE s.id = ?')
+  // Récupérer la catégorie de la compétence
+  const skillRow = await db
+    .prepare('SELECT category_id FROM skills WHERE id = ?')
     .bind(request.skill_id)
-    .first<{ id: string }>();
-  if (!domainRow) throw new Error('Domaine introuvable pour skill_id: ' + request.skill_id);
+    .first<{ category_id: string | null }>();
+
+  const categoryId = skillRow?.category_id ?? null;
+
+  // Si la compétence n'a pas de catégorie → pas de badge
+  if (!categoryId) return null;
+
+  // Compter les compétences actives dans la catégorie
+  const totalRow = await db
+    .prepare('SELECT COUNT(*) AS count FROM skills WHERE category_id = ? AND active = 1')
+    .bind(categoryId)
+    .first<{ count: number }>();
+  const totalSkills = totalRow?.count ?? 0;
+
+  // Compter combien de compétences de cette catégorie sont approuvées pour ce jeune
+  // (en utilisant DISTINCT skill_id pour éviter les doublons si plusieurs demandes)
+  const approvedRow = await db
+    .prepare(`
+      SELECT COUNT(DISTINCT br.skill_id) AS count
+      FROM badge_requests br
+      JOIN skills s ON s.id = br.skill_id
+      WHERE br.jeune_id = ? AND s.category_id = ? AND br.status = 'approved' AND s.active = 1
+    `)
+    .bind(request.jeune_id, categoryId)
+    .first<{ count: number }>();
+  const approvedSkills = approvedRow?.count ?? 0;
+
+  // Si toutes les compétences de la catégorie sont validées → accorder le badge
+  if (totalSkills === 0 || approvedSkills < totalSkills) return null;
+
+  // Vérifier qu'un badge n'existe pas déjà pour cette catégorie
+  const existingBadge = await getCategoryBadge(db, request.jeune_id, categoryId);
+  if (existingBadge) return existingBadge;
+
+  // Niveau : basé sur le nombre de badges de catégorie du jeune dans ce domaine
+  const domainRow = await db
+    .prepare('SELECT domain_id FROM categories WHERE id = ?')
+    .bind(categoryId)
+    .first<{ domain_id: string }>();
 
   const countRow = await db
     .prepare(`
       SELECT COUNT(*) AS count FROM badges b
-      JOIN skills s ON s.id = b.skill_id
-      WHERE b.jeune_id = ? AND s.domain_id = ?
+      JOIN categories c ON c.id = b.category_id
+      WHERE b.jeune_id = ? AND c.domain_id = ?
     `)
-    .bind(request.jeune_id, domainRow.id)
+    .bind(request.jeune_id, domainRow?.domain_id ?? '')
     .first<{ count: number }>();
 
   const newCount = (countRow?.count ?? 0) + 1;
-
-  const LEVEL_MAP: [number, Badge['level']][] = [
-    [5, 'noir'], [4, 'rouge'], [3, 'orange'], [2, 'jaune'], [1, 'blanc'],
-  ];
   const level = LEVEL_MAP.find(([t]) => newCount >= t)?.[1] ?? 'blanc';
 
   const badgeId = crypto.randomUUID();
   await db
     .prepare(
-      'INSERT INTO badges (id, jeune_id, skill_id, request_id, awarded_at, level) VALUES (?, ?, ?, ?, ?, ?)'
+      'INSERT INTO badges (id, jeune_id, category_id, request_id, awarded_at, level) VALUES (?, ?, ?, ?, ?, ?)'
     )
-    .bind(badgeId, request.jeune_id, request.skill_id, requestId, now, level)
+    .bind(badgeId, request.jeune_id, categoryId, requestId, now, level)
     .run();
 
   return {
     id: badgeId,
     jeune_id: request.jeune_id,
-    skill_id: request.skill_id,
+    category_id: categoryId,
     request_id: requestId,
     awarded_at: now,
     level,
+    printed_by: null,
+    printed_at: null,
   };
 }
 
@@ -367,7 +547,7 @@ export async function getBadgeRequestsByJeune(
 ): Promise<BadgeRequest[]> {
   const result = await db
     .prepare(
-      'SELECT id, jeune_id, skill_id, status, proof_url, proof_type, submitted_at, reviewed_at, reviewer_id, reviewer_comment FROM badge_requests WHERE jeune_id = ? ORDER BY submitted_at DESC'
+      'SELECT id, jeune_id, skill_id, status, proof_url, proof_type, submitted_at, reviewed_at, reviewer_id, reviewer_comment, jeune_comment, project_url, project_type FROM badge_requests WHERE jeune_id = ? ORDER BY submitted_at DESC'
     )
     .bind(jeuneId)
     .all<BadgeRequest>();
@@ -473,7 +653,6 @@ export async function approveProposal(
 ): Promise<void> {
   const now = Math.floor(Date.now() / 1000);
 
-  // Récupérer la proposition
   const proposal = await db
     .prepare('SELECT id, domain_id, title, description, status FROM skill_proposals WHERE id = ?')
     .bind(proposalId)
@@ -482,7 +661,6 @@ export async function approveProposal(
   if (!proposal) throw new Error('Proposition introuvable');
   if (proposal.status !== 'pending') throw new Error('Proposition déjà traitée');
 
-  // Calcul du prochain sort_order
   const maxOrder = await db
     .prepare('SELECT COALESCE(MAX(sort_order), -1) AS max_order FROM skills WHERE domain_id = ?')
     .bind(proposal.domain_id)
@@ -490,7 +668,6 @@ export async function approveProposal(
 
   const nextOrder = (maxOrder?.max_order ?? -1) + 1;
 
-  // Atomique : créer la compétence + marquer approuvée
   await db.batch([
     db
       .prepare(
@@ -547,7 +724,6 @@ export async function createAnimateurInvitation(
   const now = Math.floor(Date.now() / 1000);
   const expires = now + 7 * 24 * 3600;
 
-  // Invalider les invitations non utilisées existantes pour cet email
   await db
     .prepare('UPDATE animateur_invitations SET used_at = ? WHERE email = ? AND used_at IS NULL')
     .bind(now, email)
