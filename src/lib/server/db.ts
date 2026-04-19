@@ -870,3 +870,168 @@ export async function getDirectoryUsers(
     .all<User>();
   return result.results;
 }
+
+// ── Teams ─────────────────────────────────────────────────────────────────────
+
+export type Team = {
+  id: string;
+  name: string;
+  description: string;
+  created_by: string;
+  created_at: number;
+};
+
+export type TeamWithCount = Team & {
+  member_count: number;
+  creator_prenom: string;
+  creator_nom: string;
+};
+
+export type TeamMember = {
+  id: string;
+  team_id: string;
+  jeune_id: string;
+  added_by: string;
+  added_at: number;
+  prenom: string;
+  nom: string;
+  email: string;
+};
+
+export async function createTeam(
+  db: D1Database,
+  name: string,
+  description: string,
+  createdBy: string
+): Promise<Team> {
+  const id = crypto.randomUUID();
+  const team = await db
+    .prepare(
+      'INSERT INTO teams (id, name, description, created_by) VALUES (?, ?, ?, ?) RETURNING id, name, description, created_by, created_at'
+    )
+    .bind(id, name, description, createdBy)
+    .first<Team>();
+  if (!team) throw new Error("Échec de la création de l'équipe");
+  return team;
+}
+
+export async function updateTeam(
+  db: D1Database,
+  id: string,
+  name: string,
+  description: string
+): Promise<void> {
+  await db
+    .prepare('UPDATE teams SET name = ?, description = ? WHERE id = ?')
+    .bind(name, description, id)
+    .run();
+}
+
+export async function getTeamById(db: D1Database, id: string): Promise<Team | null> {
+  const result = await db
+    .prepare('SELECT id, name, description, created_by, created_at FROM teams WHERE id = ?')
+    .bind(id)
+    .first<Team>();
+  return result ?? null;
+}
+
+export async function getAllTeams(db: D1Database): Promise<TeamWithCount[]> {
+  const result = await db
+    .prepare(
+      `SELECT t.id, t.name, t.description, t.created_by, t.created_at,
+              u.prenom AS creator_prenom, u.nom AS creator_nom,
+              COUNT(tm.id) AS member_count
+       FROM teams t
+       JOIN users u ON u.id = t.created_by
+       LEFT JOIN team_members tm ON tm.team_id = t.id
+       GROUP BY t.id
+       ORDER BY t.created_at DESC`
+    )
+    .all<TeamWithCount>();
+  return result.results;
+}
+
+export async function getTeamsByCreator(db: D1Database, createdBy: string): Promise<TeamWithCount[]> {
+  const result = await db
+    .prepare(
+      `SELECT t.id, t.name, t.description, t.created_by, t.created_at,
+              u.prenom AS creator_prenom, u.nom AS creator_nom,
+              COUNT(tm.id) AS member_count
+       FROM teams t
+       JOIN users u ON u.id = t.created_by
+       LEFT JOIN team_members tm ON tm.team_id = t.id
+       WHERE t.created_by = ?
+       GROUP BY t.id
+       ORDER BY t.created_at DESC`
+    )
+    .bind(createdBy)
+    .all<TeamWithCount>();
+  return result.results;
+}
+
+export async function getTeamMembers(db: D1Database, teamId: string): Promise<TeamMember[]> {
+  const result = await db
+    .prepare(
+      `SELECT tm.id, tm.team_id, tm.jeune_id, tm.added_by, tm.added_at,
+              u.prenom, u.nom, u.email
+       FROM team_members tm
+       JOIN users u ON u.id = tm.jeune_id
+       WHERE tm.team_id = ?
+       ORDER BY u.nom, u.prenom`
+    )
+    .bind(teamId)
+    .all<TeamMember>();
+  return result.results;
+}
+
+export async function getAllJeunes(db: D1Database): Promise<User[]> {
+  const result = await db
+    .prepare(
+      `SELECT id, email, role, nom, prenom, created_at
+       FROM users
+       WHERE role = 'jeune'
+       ORDER BY nom, prenom`
+    )
+    .all<User>();
+  return result.results;
+}
+
+export async function getJeunesNotInTeam(db: D1Database, teamId: string): Promise<User[]> {
+  const result = await db
+    .prepare(
+      `SELECT id, email, role, nom, prenom, created_at
+       FROM users
+       WHERE role = 'jeune'
+         AND id NOT IN (SELECT jeune_id FROM team_members WHERE team_id = ?)
+       ORDER BY nom, prenom`
+    )
+    .bind(teamId)
+    .all<User>();
+  return result.results;
+}
+
+export async function addJeuneToTeam(
+  db: D1Database,
+  teamId: string,
+  jeuneId: string,
+  addedBy: string
+): Promise<void> {
+  const id = crypto.randomUUID();
+  await db
+    .prepare(
+      'INSERT OR IGNORE INTO team_members (id, team_id, jeune_id, added_by) VALUES (?, ?, ?, ?)'
+    )
+    .bind(id, teamId, jeuneId, addedBy)
+    .run();
+}
+
+export async function removeJeuneFromTeam(
+  db: D1Database,
+  teamId: string,
+  jeuneId: string
+): Promise<void> {
+  await db
+    .prepare('DELETE FROM team_members WHERE team_id = ? AND jeune_id = ?')
+    .bind(teamId, jeuneId)
+    .run();
+}
