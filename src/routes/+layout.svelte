@@ -10,6 +10,17 @@
       navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
   });
+
+  const ROLE_HOME: Record<string, string> = {
+    jeune:     '/jeune/passeport',
+    animateur: '/animateur/validations',
+    admin:     '/competences',
+    parent:    '/parent/enfant',
+  };
+
+  const roleHome = $derived(
+    data.session ? (ROLE_HOME[data.session.user.role] ?? '/') : '/'
+  );
 </script>
 
 <svelte:head>
@@ -28,7 +39,9 @@
         <a href="/leaderboard" class="text-sm text-gray-400 hover:text-orange-400 transition-colors">Classement</a>
       </div>
       <div class="flex items-center gap-4 text-sm">
-        <span class="text-gray-400">{data.session.user.prenom} {data.session.user.nom}</span>
+        <a href={roleHome} class="text-gray-400 hover:text-orange-400 transition-colors">
+          {data.session.user.prenom} {data.session.user.nom}
+        </a>
         <form method="POST" action="/auth/logout">
           <button class="text-gray-500 hover:text-gray-300">Déconnexion</button>
         </form>
