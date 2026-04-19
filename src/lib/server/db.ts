@@ -1035,3 +1035,36 @@ export async function removeJeuneFromTeam(
     .bind(teamId, jeuneId)
     .run();
 }
+
+// ── Leaderboard ───────────────────────────────────────────────────────────────
+
+export type LeaderboardEntry = {
+  team_id: string;
+  team_name: string;
+  team_description: string;
+  jeune_id: string;
+  prenom: string;
+  nom: string;
+  badge_count: number;
+  skill_count: number;
+};
+
+export async function getLeaderboardByTeam(db: D1Database): Promise<LeaderboardEntry[]> {
+  const result = await db
+    .prepare(
+      `SELECT
+         t.id AS team_id, t.name AS team_name, t.description AS team_description,
+         u.id AS jeune_id, u.prenom, u.nom,
+         COUNT(DISTINCT b.id) AS badge_count,
+         COUNT(DISTINCT CASE WHEN br.status = 'approved' THEN br.skill_id END) AS skill_count
+       FROM teams t
+       JOIN team_members tm ON tm.team_id = t.id
+       JOIN users u ON u.id = tm.jeune_id
+       LEFT JOIN badges b ON b.jeune_id = u.id
+       LEFT JOIN badge_requests br ON br.jeune_id = u.id
+       GROUP BY t.id, u.id
+       ORDER BY t.name ASC, badge_count DESC, skill_count DESC`
+    )
+    .all<LeaderboardEntry>();
+  return result.results;
+}

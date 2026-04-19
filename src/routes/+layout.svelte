@@ -23,7 +23,10 @@
 <div class="min-h-screen bg-gray-950 text-gray-100">
   {#if data.session}
     <nav class="border-b border-gray-800 px-4 py-3 flex items-center justify-between">
-      <span class="font-bold text-orange-400">Brickodeurs</span>
+      <div class="flex items-center gap-5">
+        <span class="font-bold text-orange-400">Brickodeurs</span>
+        <a href="/leaderboard" class="text-sm text-gray-400 hover:text-orange-400 transition-colors">Classement</a>
+      </div>
       <div class="flex items-center gap-4 text-sm">
         <span class="text-gray-400">{data.session.user.prenom} {data.session.user.nom}</span>
         <form method="POST" action="/auth/logout">
