@@ -42,6 +42,9 @@
       Se connecter
     </button>
     <p class="text-sm text-gray-500 text-center">
+      <a href="/auth/magic-login" class="text-orange-400 hover:underline">Se connecter par email (sans mot de passe)</a>
+    </p>
+    <p class="text-sm text-gray-500 text-center">
       Pas encore de compte ?
       <a href="/auth/register" class="text-orange-400 hover:underline">S'inscrire</a>
     </p>

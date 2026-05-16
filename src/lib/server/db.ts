@@ -284,6 +284,43 @@ export async function markBadgePrinted(
     .run();
 }
 
+// ── Magic Login Tokens ────────────────────────────────────────────────────────
+
+export async function createMagicLoginToken(db: D1Database, email: string): Promise<string> {
+  const token = crypto.randomUUID();
+  const expires_at = Math.floor(Date.now() / 1000) + 60 * 15; // 15 minutes
+
+  await db
+    .prepare(
+      'INSERT INTO magic_login_tokens (token, email, expires_at) VALUES (?, ?, ?)'
+    )
+    .bind(token, email, expires_at)
+    .run();
+
+  return token;
+}
+
+export async function getValidMagicLoginToken(
+  db: D1Database,
+  token: string
+): Promise<{ email: string } | null> {
+  const now = Math.floor(Date.now() / 1000);
+  const result = await db
+    .prepare(
+      'SELECT email FROM magic_login_tokens WHERE token = ? AND expires_at > ? AND used = 0'
+    )
+    .bind(token, now)
+    .first<{ email: string }>();
+  return result ?? null;
+}
+
+export async function markMagicLoginTokenUsed(db: D1Database, token: string): Promise<void> {
+  await db
+    .prepare('UPDATE magic_login_tokens SET used = 1 WHERE token = ?')
+    .bind(token)
+    .run();
+}
+
 // ── Parent Invitations ────────────────────────────────────────────────────────
 
 export async function createParentInvitation(
