@@ -1118,3 +1118,455 @@ export async function getLeaderboardByTeam(db: D1Database): Promise<LeaderboardE
     .all<LeaderboardEntry>();
   return result.results;
 }
+
+// ── Projects ──────────────────────────────────────────────────────────────────
+
+export type Project = {
+  id: string;
+  name: string;
+  description: string;
+  start_date: number;
+  end_date: number;
+  team_id: string;
+  created_by: string;
+  created_at: number;
+};
+
+export type ProjectWithMeta = Project & {
+  creator_prenom: string;
+  creator_nom: string;
+  task_count: number;
+  tasks_done_count: number;
+};
+
+export type ProjectTask = {
+  id: string;
+  project_id: string;
+  order_num: number;
+  title: string;
+  description: string;
+  state: 'todo' | 'in_progress' | 'done' | 'delivered';
+  created_at: number;
+  updated_at: number;
+};
+
+export type TaskAssignment = {
+  id: string;
+  task_id: string;
+  jeune_id: string;
+  assigned_by: string;
+  assigned_at: number;
+};
+
+export type ProjectTaskSkill = {
+  skill_id: string;
+  skill_title: string;
+  skill_description: string;
+  skill_active: number;
+};
+
+export type ProjectTaskWithAssignees = ProjectTask & {
+  assigned_count: number;
+  skills: ProjectTaskSkill[];
+};
+
+export async function getProjectsByTeam(
+  db: D1Database,
+  teamId: string
+): Promise<ProjectWithMeta[]> {
+  const result = await db
+    .prepare(
+      `SELECT
+        p.id, p.name, p.description, p.start_date, p.end_date,
+        p.team_id, p.created_by, p.created_at,
+        u.prenom AS creator_prenom, u.nom AS creator_nom,
+        COUNT(DISTINCT pt.id) AS task_count,
+        COUNT(DISTINCT CASE WHEN pt.state IN ('done', 'delivered') THEN pt.id END) AS tasks_done_count
+      FROM projects p
+      JOIN users u ON u.id = p.created_by
+      LEFT JOIN project_tasks pt ON pt.project_id = p.id
+      WHERE p.team_id = ?
+      GROUP BY p.id
+      ORDER BY p.end_date DESC`
+    )
+    .bind(teamId)
+    .all<ProjectWithMeta>();
+  return result.results;
+}
+
+export async function getProjectById(
+  db: D1Database,
+  projectId: string
+): Promise<ProjectWithMeta | null> {
+  const result = await db
+    .prepare(
+      `SELECT
+        p.id, p.name, p.description, p.start_date, p.end_date,
+        p.team_id, p.created_by, p.created_at,
+        u.prenom AS creator_prenom, u.nom AS creator_nom,
+        COUNT(DISTINCT pt.id) AS task_count,
+        COUNT(DISTINCT CASE WHEN pt.state IN ('done', 'delivered') THEN pt.id END) AS tasks_done_count
+      FROM projects p
+      JOIN users u ON u.id = p.created_by
+      LEFT JOIN project_tasks pt ON pt.project_id = p.id
+      WHERE p.id = ?
+      GROUP BY p.id`
+    )
+    .bind(projectId)
+    .first<ProjectWithMeta>();
+  return result ?? null;
+}
+
+export async function createProject(
+  db: D1Database,
+  name: string,
+  description: string,
+  startDate: number,
+  endDate: number,
+  teamId: string,
+  createdBy: string
+): Promise<Project> {
+  const id = crypto.randomUUID();
+  const project = await db
+    .prepare(
+      `INSERT INTO projects (id, name, description, start_date, end_date, team_id, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       RETURNING id, name, description, start_date, end_date, team_id, created_by, created_at`
+    )
+    .bind(id, name, description, startDate, endDate, teamId, createdBy)
+    .first<Project>();
+  if (!project) throw new Error('Échec de la création du projet');
+  return project;
+}
+
+export async function updateProject(
+  db: D1Database,
+  id: string,
+  name: string,
+  description: string,
+  startDate: number,
+  endDate: number
+): Promise<void> {
+  await db
+    .prepare('UPDATE projects SET name = ?, description = ?, start_date = ?, end_date = ? WHERE id = ?')
+    .bind(name, description, startDate, endDate, id)
+    .run();
+}
+
+export async function deleteProject(db: D1Database, id: string): Promise<void> {
+  await db.prepare('DELETE FROM projects WHERE id = ?').bind(id).run();
+}
+
+export async function getTasksByProject(
+  db: D1Database,
+  projectId: string
+): Promise<ProjectTaskWithAssignees[]> {
+  const rows = await db
+    .prepare(
+      `SELECT
+        pt.id, pt.project_id, pt.order_num, pt.title, pt.description,
+        pt.state, pt.created_at, pt.updated_at,
+        COUNT(DISTINCT ta.jeune_id) AS assigned_count,
+        ts.skill_id, s.title AS skill_title, s.description AS skill_description, s.active AS skill_active
+      FROM project_tasks pt
+      LEFT JOIN task_assignments ta ON ta.task_id = pt.id
+      LEFT JOIN task_skills ts ON ts.task_id = pt.id
+      LEFT JOIN skills s ON s.id = ts.skill_id
+      WHERE pt.project_id = ?
+      GROUP BY pt.id, ts.skill_id, s.title, s.description, s.active
+      ORDER BY pt.order_num ASC`
+    )
+    .bind(projectId)
+    .all<{ id: string; project_id: string; order_num: number; title: string; description: string; state: string; created_at: number; updated_at: number; assigned_count: number; skill_id: string | null; skill_title: string | null; skill_description: string | null; skill_active: number | null }>();
+
+  const tasks: ProjectTaskWithAssignees[] = [];
+  const taskMap = new Map<string, ProjectTaskWithAssignees>();
+
+  for (const row of rows.results) {
+    let task = taskMap.get(row.id);
+    if (!task) {
+      task = {
+        id: row.id,
+        project_id: row.project_id,
+        order_num: row.order_num,
+        title: row.title,
+        description: row.description,
+        state: row.state as 'todo' | 'in_progress' | 'done' | 'delivered',
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+        assigned_count: row.assigned_count,
+        skills: []
+      };
+      taskMap.set(row.id, task);
+      tasks.push(task);
+    }
+    if (row.skill_id) {
+      task.skills.push({
+        skill_id: row.skill_id,
+        skill_title: row.skill_title!,
+        skill_description: row.skill_description!,
+        skill_active: row.skill_active!
+      });
+    }
+  }
+
+  // Déduplication des compétences
+  for (const task of tasks) {
+    const uniqueSkills = new Map<string, ProjectTaskSkill>();
+    for (const skill of task.skills) {
+      if (!uniqueSkills.has(skill.skill_id)) {
+        uniqueSkills.set(skill.skill_id, skill);
+      }
+    }
+    task.skills = Array.from(uniqueSkills.values());
+  }
+
+  return tasks;
+}
+
+export async function createTask(
+  db: D1Database,
+  projectId: string,
+  orderNum: number,
+  title: string,
+  description: string,
+  skillIds: string[]
+): Promise<ProjectTask> {
+  const id = crypto.randomUUID();
+  const now = Math.floor(Date.now() / 1000);
+
+  const task = await db
+    .prepare(
+      `INSERT INTO project_tasks (id, project_id, order_num, title, description, state, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, 'todo', ?, ?)
+       RETURNING id, project_id, order_num, title, description, state, created_at, updated_at`
+    )
+    .bind(id, projectId, orderNum, title, description, now, now)
+    .first<ProjectTask>();
+
+  if (!task) throw new Error('Échec de la création de la tâche');
+
+  for (const skillId of skillIds) {
+    await db
+      .prepare('INSERT OR IGNORE INTO task_skills (id, task_id, skill_id) VALUES (?, ?, ?)')
+      .bind(crypto.randomUUID(), id, skillId)
+      .run();
+  }
+
+  return task;
+}
+
+export async function updateTask(
+  db: D1Database,
+  taskId: string,
+  title: string,
+  description: string,
+  state: 'todo' | 'in_progress' | 'done' | 'delivered',
+  skillIds: string[]
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+
+  await db
+    .prepare('UPDATE project_tasks SET title = ?, description = ?, state = ?, updated_at = ? WHERE id = ?')
+    .bind(title, description, state, now, taskId)
+    .run();
+
+  await db.prepare('DELETE FROM task_skills WHERE task_id = ?').bind(taskId).run();
+  for (const skillId of skillIds) {
+    await db
+      .prepare('INSERT OR IGNORE INTO task_skills (id, task_id, skill_id) VALUES (?, ?, ?)')
+      .bind(crypto.randomUUID(), taskId, skillId)
+      .run();
+  }
+}
+
+export async function deleteTask(db: D1Database, taskId: string): Promise<void> {
+  await db.prepare('DELETE FROM project_tasks WHERE id = ?').bind(taskId).run();
+}
+
+export async function getTaskById(
+  db: D1Database,
+  taskId: string
+): Promise<ProjectTaskWithAssignees | null> {
+  const rows = await db
+    .prepare(
+      `SELECT
+        pt.id, pt.project_id, pt.order_num, pt.title, pt.description,
+        pt.state, pt.created_at, pt.updated_at,
+        COUNT(DISTINCT ta.jeune_id) AS assigned_count,
+        ts.skill_id, s.title AS skill_title, s.description AS skill_description, s.active AS skill_active
+      FROM project_tasks pt
+      LEFT JOIN task_assignments ta ON ta.task_id = pt.id
+      LEFT JOIN task_skills ts ON ts.task_id = pt.id
+      LEFT JOIN skills s ON s.id = ts.skill_id
+      WHERE pt.id = ?
+      GROUP BY pt.id, ts.skill_id, s.title, s.description, s.active`
+    )
+    .bind(taskId)
+    .all<{ id: string; project_id: string; order_num: number; title: string; description: string; state: string; created_at: number; updated_at: number; assigned_count: number; skill_id: string | null; skill_title: string | null; skill_description: string | null; skill_active: number | null }>();
+
+  if (rows.results.length === 0) return null;
+
+  const first = rows.results[0];
+  const task: ProjectTaskWithAssignees = {
+    id: first.id,
+    project_id: first.project_id,
+    order_num: first.order_num,
+    title: first.title,
+    description: first.description,
+    state: first.state as 'todo' | 'in_progress' | 'done' | 'delivered',
+    created_at: first.created_at,
+    updated_at: first.updated_at,
+    assigned_count: first.assigned_count,
+    skills: []
+  };
+
+  for (const row of rows.results) {
+    if (row.skill_id && !task.skills.find(s => s.skill_id === row.skill_id)) {
+      task.skills.push({
+        skill_id: row.skill_id,
+        skill_title: row.skill_title!,
+        skill_description: row.skill_description!,
+        skill_active: row.skill_active!
+      });
+    }
+  }
+
+  return task;
+}
+
+export async function getTasksByJeune(
+  db: D1Database,
+  jeuneId: string
+): Promise<ProjectTaskWithAssignees[]> {
+  const taskRows = await db
+    .prepare(
+      `SELECT DISTINCT pt.id, pt.project_id, pt.order_num, pt.title, pt.description,
+        pt.state, pt.created_at, pt.updated_at,
+        COUNT(DISTINCT ta.jeune_id) AS assigned_count
+      FROM project_tasks pt
+      JOIN task_assignments ta ON ta.task_id = pt.id
+      WHERE ta.jeune_id = ?
+      GROUP BY pt.id
+      ORDER BY pt.order_num ASC`
+    )
+    .bind(jeuneId)
+    .all<{ id: string; project_id: string; order_num: number; title: string; description: string; state: string; created_at: number; updated_at: number; assigned_count: number }>();
+
+  const tasks: ProjectTaskWithAssignees[] = [];
+
+  for (const row of taskRows.results) {
+    const task: ProjectTaskWithAssignees = {
+      id: row.id,
+      project_id: row.project_id,
+      order_num: row.order_num,
+      title: row.title,
+      description: row.description,
+      state: row.state as 'todo' | 'in_progress' | 'done' | 'delivered',
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      assigned_count: row.assigned_count,
+      skills: []
+    };
+
+    const skillRows = await db
+      .prepare(
+        `SELECT ts.skill_id, s.title, s.description, s.active
+         FROM task_skills ts
+         JOIN skills s ON s.id = ts.skill_id
+         WHERE ts.task_id = ?`
+      )
+      .bind(row.id)
+      .all<{ skill_id: string; title: string; description: string; active: number }>();
+
+    for (const skill of skillRows.results) {
+      task.skills.push({
+        skill_id: skill.skill_id,
+        skill_title: skill.title,
+        skill_description: skill.description,
+        skill_active: skill.active
+      });
+    }
+
+    tasks.push(task);
+  }
+
+  return tasks;
+}
+
+export async function addJeuneToTask(
+  db: D1Database,
+  taskId: string,
+  jeuneId: string,
+  assignedBy: string
+): Promise<void> {
+  const id = crypto.randomUUID();
+  await db
+    .prepare(
+      'INSERT OR IGNORE INTO task_assignments (id, task_id, jeune_id, assigned_by) VALUES (?, ?, ?, ?)'
+    )
+    .bind(id, taskId, jeuneId, assignedBy)
+    .run();
+}
+
+export async function removeJeuneFromTask(
+  db: D1Database,
+  taskId: string,
+  jeuneId: string
+): Promise<void> {
+  await db
+    .prepare('DELETE FROM task_assignments WHERE task_id = ? AND jeune_id = ?')
+    .bind(taskId, jeuneId)
+    .run();
+}
+
+export async function getTaskAssignmentsByTask(
+  db: D1Database,
+  taskId: string
+): Promise<TaskAssignment[]> {
+  const result = await db
+    .prepare(
+      `SELECT ta.id, ta.task_id, ta.jeune_id, ta.assigned_by, ta.assigned_at
+       FROM task_assignments ta
+       WHERE ta.task_id = ?
+       ORDER BY ta.assigned_at ASC`
+    )
+    .bind(taskId)
+    .all<TaskAssignment>();
+  return result.results;
+}
+
+export async function getTaskSkills(db: D1Database, taskId: string): Promise<ProjectTaskSkill[]> {
+  const result = await db
+    .prepare(
+      `SELECT ts.skill_id, s.title, s.description, s.active
+       FROM task_skills ts
+       JOIN skills s ON s.id = ts.skill_id
+       WHERE ts.task_id = ?`
+    )
+    .bind(taskId)
+    .all<ProjectTaskSkill>();
+  return result.results;
+}
+
+export async function addSkillToTask(
+  db: D1Database,
+  taskId: string,
+  skillId: string
+): Promise<void> {
+  await db
+    .prepare('INSERT OR IGNORE INTO task_skills (id, task_id, skill_id) VALUES (?, ?, ?)')
+    .bind(crypto.randomUUID(), taskId, skillId)
+    .run();
+}
+
+export async function removeSkillFromTask(
+  db: D1Database,
+  taskId: string,
+  skillId: string
+): Promise<void> {
+  await db
+    .prepare('DELETE FROM task_skills WHERE task_id = ? AND skill_id = ?')
+    .bind(taskId, skillId)
+    .run();
+}
