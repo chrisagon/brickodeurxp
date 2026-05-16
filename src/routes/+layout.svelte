@@ -39,6 +39,7 @@
         <a href="/leaderboard" class="text-sm text-gray-400 hover:text-orange-400 transition-colors">Classement</a>
       </div>
       <div class="flex items-center gap-4 text-sm">
+        <a href="/profile" class="text-gray-400 hover:text-orange-400 transition-colors">Profil</a>
         <a href={roleHome} class="text-gray-400 hover:text-orange-400 transition-colors">
           {data.session.user.prenom} {data.session.user.nom}
         </a>

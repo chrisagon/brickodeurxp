@@ -102,6 +102,19 @@ export async function getUserByEmailWithPassword(
   return result ?? null;
 }
 
+export async function updateUser(
+  db: D1Database,
+  userId: string,
+  nom: string,
+  prenom: string,
+  email: string
+): Promise<void> {
+  await db
+    .prepare('UPDATE users SET nom = ?, prenom = ?, email = ? WHERE id = ?')
+    .bind(nom, prenom, email, userId)
+    .run();
+}
+
 export async function getUserById(db: D1Database, id: string): Promise<User | null> {
   const result = await db
     .prepare('SELECT id, email, role, nom, prenom, created_at FROM users WHERE id = ?')
