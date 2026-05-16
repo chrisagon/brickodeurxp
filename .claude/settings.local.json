@@ -39,7 +39,29 @@
       "Bash(curl -sv http://localhost:8788/auth/animateur/badtoken)",
       "Bash(find E:/Applications/brickodeurxp/.wrangler -name *.sqlite)",
       "Bash(node -e \":*)",
-      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8788/auth/animateur/badtoken)"
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8788/auth/animateur/badtoken)",
+      "Skill(land-and-deploy)",
+      "Skill(land-and-deploy:*)",
+      "mcp__8ab0394f-e18f-4ab9-b578-a28ea09911c9__accounts_list",
+      "mcp__8ab0394f-e18f-4ab9-b578-a28ea09911c9__d1_databases_list",
+      "mcp__8ab0394f-e18f-4ab9-b578-a28ea09911c9__r2_buckets_list",
+      "mcp__8ab0394f-e18f-4ab9-b578-a28ea09911c9__set_active_account",
+      "mcp__8ab0394f-e18f-4ab9-b578-a28ea09911c9__d1_database_create",
+      "mcp__8ab0394f-e18f-4ab9-b578-a28ea09911c9__r2_bucket_create",
+      "Bash(npx wrangler d1 execute brickodeurxp --remote --command=\":*)",
+      "Bash(node -e \"const d=require\\(''''fs''''\\).readFileSync\\(''''/dev/stdin'''',''''utf8''''\\); const r=JSON.parse\\(d\\); console.log\\(''''success:'''', r.success\\); if\\(r.errors?.length\\) console.log\\(''''errors:'''', JSON.stringify\\(r.errors\\)\\);\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" https://brickodeurxp.pages.dev/icons/icon-192.png)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" https://brickodeurxp.pages.dev/auth/login)",
+      "Bash(curl -s \"https://api.resend.com/domains\" -H \"Authorization: Bearer re_We8J3fF1_b3d6GHnQTsFHAuNxiNX5dMyA\")",
+      "Bash(gh release:*)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" -X POST http://localhost:8788/auth/login -H \"Content-Type: application/x-www-form-urlencoded\" -d \"email=admin%40test.fr&password=Admin1234!\")",
+      "Bash(for f:*)",
+      "Bash(do echo:*)",
+      "Bash(grep -v \"^[[:space:]]*$\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8788/competences)",
+      "Bash(ls E:/Applications/brickodeurxp/static/hexa*.png)",
+      "Bash(npx svelte-kit:*)",
+      "Bash(node -e \"const bcrypt = require\\('bcryptjs'\\); bcrypt.hash\\('Admin1234!', 10\\).then\\(h => console.log\\(h\\)\\)\")"
     ]
   }
 }

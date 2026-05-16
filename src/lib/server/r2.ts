@@ -5,6 +5,11 @@ export function getProofKey(jeuneId: string, skillId: string, filename: string):
   return `proofs/${jeuneId}/${skillId}/${Date.now()}.${ext}`;
 }
 
+export function getProjectKey(jeuneId: string, skillId: string, filename: string): string {
+  const ext = filename.split('.').pop() ?? 'bin';
+  return `projects/${jeuneId}/${skillId}/${Date.now()}.${ext}`;
+}
+
 export function getProofType(file: File): 'photo' | 'video' {
   return file.type.startsWith('video/') ? 'video' : 'photo';
 }

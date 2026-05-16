@@ -6,6 +6,10 @@
   let previewUrl = $state<string | null>(null);
   let isVideo = $state(false);
 
+  let projectFileName = $state('');
+  let projectPreviewUrl = $state<string | null>(null);
+  let projectIsImage = $state(false);
+
   function onFileChange(e: Event) {
     const input = e.target as HTMLInputElement;
     const file = input.files?.[0];
@@ -14,6 +18,16 @@
     isVideo = file.type.startsWith('video/');
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     previewUrl = URL.createObjectURL(file);
+  }
+
+  function onProjectChange(e: Event) {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    projectFileName = file.name;
+    projectIsImage = file.type.startsWith('image/');
+    if (projectPreviewUrl) URL.revokeObjectURL(projectPreviewUrl);
+    projectPreviewUrl = projectIsImage ? URL.createObjectURL(file) : null;
   }
 </script>
 
@@ -49,9 +63,24 @@
       {/if}
 
       <form method="POST" enctype="multipart/form-data" class="flex flex-col gap-4">
+        <!-- Commentaire du jeune -->
+        <div>
+          <label class="block text-sm text-gray-400 mb-1" for="comment">
+            Commentaire (optionnel)
+          </label>
+          <textarea
+            id="comment"
+            name="comment"
+            rows="3"
+            placeholder="Décris ce que tu as fait, les difficultés rencontrées..."
+            class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-500 resize-none"
+          ></textarea>
+        </div>
+
+        <!-- Capture d'écran / vidéo (obligatoire) -->
         <div>
           <p class="block text-sm text-gray-400 mb-2">
-            Photo ou vidéo de ta réalisation
+            Photo ou vidéo de ta réalisation <span class="text-red-400">*</span>
           </p>
           <label
             class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-700 rounded-xl cursor-pointer hover:border-orange-500 transition-colors bg-gray-800/50"
@@ -83,6 +112,33 @@
             {:else}
               <img src={previewUrl} alt="Aperçu" class="w-full max-h-48 object-contain" />
             {/if}
+          </div>
+        {/if}
+
+        <!-- Fichier projet (optionnel) -->
+        <div>
+          <p class="block text-sm text-gray-400 mb-2">Fichier projet (optionnel)</p>
+          <label
+            class="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-700 rounded-xl cursor-pointer hover:border-orange-500 transition-colors bg-gray-800/50"
+          >
+            <input
+              name="project"
+              type="file"
+              class="hidden"
+              onchange={onProjectChange}
+            />
+            {#if projectFileName}
+              <span class="text-sm text-orange-400">{projectFileName}</span>
+            {:else}
+              <span class="text-2xl mb-1">🗂️</span>
+              <span class="text-sm text-gray-500">ZIP, PDF, image...</span>
+            {/if}
+          </label>
+        </div>
+
+        {#if projectPreviewUrl}
+          <div class="rounded-lg overflow-hidden bg-gray-800 max-h-32">
+            <img src={projectPreviewUrl} alt="Aperçu projet" class="w-full max-h-32 object-contain" />
           </div>
         {/if}
 

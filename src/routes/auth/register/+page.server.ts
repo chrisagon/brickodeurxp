@@ -9,15 +9,19 @@ export const actions: Actions = {
     const data = await request.formData();
     const email = String(data.get('email') ?? '').trim().toLowerCase();
     const password = String(data.get('password') ?? '');
+    const confirmPassword = String(data.get('confirm_password') ?? '');
     const nom = String(data.get('nom') ?? '').trim();
     const prenom = String(data.get('prenom') ?? '').trim();
     const parent_email = String(data.get('parent_email') ?? '').trim().toLowerCase();
 
-    if (!email || !password || !nom || !prenom || !parent_email) {
+    if (!email || !password || !confirmPassword || !nom || !prenom || !parent_email) {
       return fail(400, { error: 'Tous les champs sont requis.' });
     }
     if (password.length < 8) {
       return fail(400, { error: 'Le mot de passe doit contenir au moins 8 caractères.' });
+    }
+    if (password !== confirmPassword) {
+      return fail(400, { error: 'Les mots de passe ne correspondent pas.' });
     }
 
     const db = platform!.env.DB;

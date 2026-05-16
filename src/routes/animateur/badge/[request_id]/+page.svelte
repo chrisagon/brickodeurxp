@@ -27,7 +27,7 @@
   <div class="bg-gray-900 rounded-xl p-6 text-center">
     <h1 class="text-xl font-bold text-orange-400 mb-1">Badge généré</h1>
     <p class="text-sm text-gray-400 mb-6">
-      {data.jeune.prenom} {data.jeune.nom} — {data.domainName}
+      {data.jeune.prenom} {data.jeune.nom} — {data.domainName}{data.categoryName ? ` / ${data.categoryName}` : ''}
     </p>
 
     <!-- Aperçu SVG -->
@@ -48,7 +48,7 @@
       >
         {data.level.toUpperCase()}
       </span>
-      <span class="text-sm text-gray-400 py-1.5">{data.domainName}</span>
+      <span class="text-sm text-gray-400 py-1.5">{data.categoryName || data.domainName}</span>
     </div>
 
     <!-- Instructions impression 3D -->

@@ -1,6 +1,13 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { getPendingRequests, approveRequest, rejectRequest, getParentsByChild, getRequestById, getUserById, getAllDomains, getSkillsByDomain } from '$lib/server/db';
+import {
+  getPendingRequests,
+  approveRequest,
+  rejectRequest,
+  getParentsByChild,
+  getRequestById,
+  getUserById,
+} from '$lib/server/db';
 import { sendEmail, buildBadgeNotificationEmail } from '$lib/server/email';
 
 export const load: PageServerLoad = async ({ platform }) => {
@@ -24,50 +31,42 @@ export const actions: Actions = {
         comment
       );
 
-      // Notification email aux parents (best-effort)
-      try {
-        const db = platform!.env.DB;
-        const appUrl = platform!.env.APP_URL;
-        const badgeRequest = await getRequestById(db, request_id);
+      // Notification email aux parents si badge accordé (best-effort)
+      if (badge) {
+        try {
+          const db = platform!.env.DB;
+          const appUrl = platform!.env.APP_URL;
+          const badgeRequest = await getRequestById(db, request_id);
 
-        if (badgeRequest) {
-          const jeune = await getUserById(db, badgeRequest.jeune_id);
-          const parents = await getParentsByChild(db, badgeRequest.jeune_id);
+          if (badgeRequest) {
+            const jeune = await getUserById(db, badgeRequest.jeune_id);
+            const parents = await getParentsByChild(db, badgeRequest.jeune_id);
 
-          // Récupérer la compétence et le domaine
-          const domains = await getAllDomains(db);
-          let skill: any = null;
-          let skillDomain: any = null;
-
-          for (const domain of domains) {
-            const skills = await getSkillsByDomain(db, domain.id);
-            const foundSkill = skills.find((s) => s.id === badgeRequest.skill_id);
-            if (foundSkill) {
-              skill = foundSkill;
-              skillDomain = domain;
-              break;
+            if (jeune && parents.length > 0) {
+              for (const parent of parents) {
+                const emailPayload = buildBadgeNotificationEmail({
+                  parentName: parent.prenom,
+                  childName: jeune.prenom + ' ' + jeune.nom,
+                  skillTitle: '',
+                  domainName: '',
+                  appUrl,
+                });
+                emailPayload.to = parent.email;
+                await sendEmail(platform!.env.RESEND_API_KEY, platform!.env.RESEND_FROM, emailPayload);
+              }
             }
           }
-
-          if (skill && skillDomain && jeune) {
-            for (const parent of parents) {
-              const emailPayload = buildBadgeNotificationEmail({
-                parentName: parent.prenom,
-                childName: jeune.prenom + ' ' + jeune.nom,
-                skillTitle: skill.title,
-                domainName: skillDomain.name,
-                appUrl,
-              });
-              emailPayload.to = parent.email;
-              await sendEmail(platform!.env.RESEND_API_KEY, platform!.env.RESEND_FROM, emailPayload);
-            }
-          }
+        } catch (err) {
+          console.error('Failed to send badge notification:', err);
         }
-      } catch (err) {
-        console.error('Failed to send badge notification:', err);
       }
 
-      return { success: true, badge_id: badge.id, approved_request_id: request_id };
+      return {
+        success: true,
+        badge_awarded: !!badge,
+        badge_id: badge?.id ?? null,
+        approved_request_id: request_id,
+      };
     } catch (e) {
       return fail(400, { error: e instanceof Error ? e.message : 'Erreur lors de la validation.' });
     }

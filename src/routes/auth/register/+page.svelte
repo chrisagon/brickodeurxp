@@ -1,6 +1,8 @@
 <script lang="ts">
   import type { ActionData } from './$types';
   let { form } = $props<{ form: ActionData }>();
+
+  let showPassword = $state(false);
 </script>
 
 <div class="max-w-md mx-auto mt-12 p-6 bg-gray-900 rounded-xl">
@@ -31,8 +33,21 @@
     </div>
     <div>
       <label class="block text-sm text-gray-400 mb-1" for="password">Mot de passe</label>
-      <input id="password" name="password" type="password" required minlength="8"
-        class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-500" />
+      <div class="relative">
+        <input id="password" name="password" type={showPassword ? 'text' : 'password'} required minlength="8"
+          class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 pr-10 text-sm focus:outline-none focus:border-orange-500" />
+        <button type="button" onclick={() => showPassword = !showPassword}
+          class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 text-xs px-1">
+          {showPassword ? 'Masquer' : 'Afficher'}
+        </button>
+      </div>
+    </div>
+    <div>
+      <label class="block text-sm text-gray-400 mb-1" for="confirm_password">Confirmer le mot de passe</label>
+      <div class="relative">
+        <input id="confirm_password" name="confirm_password" type={showPassword ? 'text' : 'password'} required minlength="8"
+          class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 pr-10 text-sm focus:outline-none focus:border-orange-500" />
+      </div>
     </div>
     <div>
       <label class="block text-sm text-gray-400 mb-1" for="parent_email">Email de ton parent</label>

@@ -1,9 +1,9 @@
 -- Seed local dev — comptes de test
--- Mot de passe commun : Brickodeurs1!
+-- Mot de passe admin : Admin1234! | autres comptes : Brickodeurs1!
 -- À NE PAS appliquer en production
 
 INSERT OR IGNORE INTO users (id, email, password_hash, role, nom, prenom, created_at) VALUES
-  ('user-admin-1',  'admin@test.fr',    '$2b$10$rglQMQFo0omKElpsYvntbudmchgW57REYpMo2NhOe5Ry0okcAXeay', 'admin',     'Admin',    'Test',   unixepoch()),
+  ('user-admin-1',  'admin@test.fr',    '$2b$10$JKnBT5/J6xr5GWUPXZyCHu1MRu3Br8.UTfNe3CR5kt68m78P6YhYm', 'admin',     'Admin',    'Test',   unixepoch()),
   ('user-anim-1',   'anim@test.fr',     '$2b$10$rglQMQFo0omKElpsYvntbudmchgW57REYpMo2NhOe5Ry0okcAXeay', 'animateur', 'Animateur','Test',   unixepoch()),
   ('user-jeune-1',  'jeune@test.fr',    '$2b$10$rglQMQFo0omKElpsYvntbudmchgW57REYpMo2NhOe5Ry0okcAXeay', 'jeune',     'Jeune',    'Test',   unixepoch()),
   ('user-parent-1', 'parent@test.fr',   '$2b$10$rglQMQFo0omKElpsYvntbudmchgW57REYpMo2NhOe5Ry0okcAXeay', 'parent',    'Parent',   'Test',   unixepoch());

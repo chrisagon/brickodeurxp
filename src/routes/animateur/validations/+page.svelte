@@ -21,13 +21,17 @@
 
   {#if form?.success && form?.approved_request_id}
     <div class="mb-4 p-4 bg-green-900/30 border border-green-800 rounded-lg flex items-center justify-between">
-      <p class="text-green-400 text-sm">✓ Badge validé avec succès !</p>
-      <a
-        href="/animateur/badge/{form.approved_request_id}"
-        class="text-xs bg-green-700 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg"
-      >
-        Générer le badge SVG →
-      </a>
+      {#if form?.badge_awarded}
+        <p class="text-green-400 text-sm">✓ Compétence validée — badge de catégorie accordé !</p>
+        <a
+          href="/animateur/badge/{form.approved_request_id}"
+          class="text-xs bg-green-700 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg"
+        >
+          Générer le badge SVG →
+        </a>
+      {:else}
+        <p class="text-green-400 text-sm">✓ Compétence validée — en attente des autres compétences de la catégorie.</p>
+      {/if}
     </div>
   {/if}
 
@@ -51,7 +55,9 @@
                 <p class="font-medium text-sm">
                   {req.jeune_prenom} {req.jeune_nom}
                 </p>
-                <p class="text-xs text-gray-500">{req.domain_name} — {req.skill_title}</p>
+                <p class="text-xs text-gray-500">
+                  {req.domain_name}{req.category_name ? ` / ${req.category_name}` : ''} — {req.skill_title}
+                </p>
               </div>
             </div>
             <div class="flex items-center gap-3 text-xs text-gray-500">
@@ -62,6 +68,14 @@
 
           {#if expandedId === req.id}
             <div class="px-5 pb-5 border-t border-gray-800 pt-4">
+              <!-- Commentaire du jeune -->
+              {#if req.jeune_comment}
+                <div class="mb-4 p-3 bg-gray-800 rounded-lg">
+                  <p class="text-xs text-gray-500 mb-1">Commentaire du jeune :</p>
+                  <p class="text-sm text-gray-300 italic">"{req.jeune_comment}"</p>
+                </div>
+              {/if}
+
               <!-- Preuve -->
               <div class="mb-4 bg-gray-800 rounded-lg overflow-hidden">
                 {#if req.proof_type === 'video'}
@@ -80,6 +94,30 @@
                   />
                 {/if}
               </div>
+
+              <!-- Fichier projet -->
+              {#if req.project_url}
+                <div class="mb-4">
+                  <p class="text-xs text-gray-500 mb-2">Fichier projet :</p>
+                  {#if req.project_type?.startsWith('image/')}
+                    <div class="bg-gray-800 rounded-lg overflow-hidden">
+                      <img
+                        src="/api/projects/{req.project_url.replace('projects/', '')}"
+                        alt="Projet de {req.jeune_prenom}"
+                        class="w-full max-h-48 object-contain"
+                      />
+                    </div>
+                  {:else}
+                    <a
+                      href="/api/projects/{req.project_url.replace('projects/', '')}"
+                      target="_blank"
+                      class="inline-flex items-center gap-2 text-sm text-orange-400 hover:text-orange-300 bg-gray-800 px-3 py-2 rounded-lg"
+                    >
+                      🗂️ Télécharger le fichier projet
+                    </a>
+                  {/if}
+                </div>
+              {/if}
 
               <!-- Formulaire approuver -->
               <form method="POST" action="?/approve" class="mb-3">

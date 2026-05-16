@@ -1,7 +1,7 @@
 import { fail, redirect, error } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { getSkillsByDomain, getAllDomains, createBadgeRequest, getBadgeRequestsByJeune } from '$lib/server/db';
-import { uploadProof, getProofKey, getProofType } from '$lib/server/r2';
+import { uploadProof, getProofKey, getProofType, getProjectKey } from '$lib/server/r2';
 
 export const load: PageServerLoad = async ({ params, locals, platform }) => {
   const db = platform!.env.DB;
@@ -37,6 +37,8 @@ export const actions: Actions = {
   default: async ({ request, params, locals, platform }) => {
     const formData = await request.formData();
     const file = formData.get('proof') as File | null;
+    const jeuneComment = (formData.get('comment') as string | null)?.trim() || null;
+    const projectFile = formData.get('project') as File | null;
 
     if (!file || file.size === 0) {
       return fail(400, { error: 'Merci de sélectionner une photo ou vidéo.' });
@@ -53,6 +55,10 @@ export const actions: Actions = {
       return fail(400, { error: 'Seules les images et vidéos sont acceptées.' });
     }
 
+    if (projectFile && projectFile.size > maxSize) {
+      return fail(400, { error: 'Le fichier projet est trop lourd (max 50 Mo).' });
+    }
+
     const db = platform!.env.DB;
     const jeuneId = locals.session!.user.id;
     const skillId = params.skill_id;
@@ -61,7 +67,16 @@ export const actions: Actions = {
     const proofType = getProofType(file);
 
     await uploadProof(platform!.env.R2, key, file);
-    await createBadgeRequest(db, jeuneId, skillId, key, proofType);
+
+    let projectKey: string | null = null;
+    let projectType: string | null = null;
+    if (projectFile && projectFile.size > 0) {
+      projectKey = getProjectKey(jeuneId, skillId, projectFile.name);
+      projectType = projectFile.type || 'application/octet-stream';
+      await uploadProof(platform!.env.R2, projectKey, projectFile);
+    }
+
+    await createBadgeRequest(db, jeuneId, skillId, key, proofType, jeuneComment, projectKey, projectType);
 
     redirect(303, '/jeune/passeport');
   },

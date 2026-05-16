@@ -32,7 +32,7 @@
                 {badge.jeune_prenom} {badge.jeune_nom}
               </p>
               <p class="text-xs text-gray-400 truncate">
-                {badge.skill_title}
+                {badge.category_name}
                 <span class="text-gray-600">·</span>
                 <span style="color:{badge.domain_color}">{badge.domain_name}</span>
               </p>
@@ -78,7 +78,7 @@
                 {badge.jeune_prenom} {badge.jeune_nom}
               </p>
               <p class="text-xs text-gray-500 truncate">
-                {badge.skill_title}
+                {badge.category_name}
                 <span class="text-gray-600">·</span>
                 {badge.domain_name}
               </p>

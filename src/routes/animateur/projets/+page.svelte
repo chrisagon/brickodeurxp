@@ -106,7 +106,7 @@
     </div>
   {/if}
 
-  {#if data.projects.length === 0}
+  {#if data.projects?.length === 0}
     <div class="text-center py-16 text-gray-600 bg-gray-900 rounded-xl">
       <p class="text-lg mb-2">Aucun projet pour l'instant.</p>
       <p class="text-sm">Créez votre premier projet pour commencer à organiser les tâches !</p>
