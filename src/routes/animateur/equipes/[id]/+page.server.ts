@@ -7,6 +7,8 @@ import {
   updateTeam,
   addJeuneToTeam,
   removeJeuneFromTeam,
+  getProjectsByTeam,
+  archiveTeam,
 } from '$lib/server/db';
 
 function requireAdminOrAnimateur(locals: App.Locals) {
@@ -26,14 +28,15 @@ export const load: PageServerLoad = async ({ params, platform, locals }) => {
   const team = await getTeamById(db, params.id);
   if (!team) error(404, 'Équipe introuvable.');
 
-  const [members, availableJeunes] = await Promise.all([
+  const [members, availableJeunes, projects] = await Promise.all([
     getTeamMembers(db, team.id),
     getJeunesNotInTeam(db, team.id),
+    getProjectsByTeam(db, team.id),
   ]);
 
   const manage = canManage(locals, team.created_by);
 
-  return { team, members, availableJeunes, canManage: manage };
+  return { team, members, availableJeunes, projects, canManage: manage };
 };
 
 export const actions: Actions = {
@@ -48,10 +51,16 @@ export const actions: Actions = {
     const data = await request.formData();
     const name = (data.get('name') as string | null)?.trim() ?? '';
     const description = (data.get('description') as string | null)?.trim() ?? '';
+    const startDate = data.get('start_date') as string | null;
+    const endDate = data.get('end_date') as string | null;
 
     if (!name) return fail(400, { editError: 'Le nom est requis.' });
 
-    await updateTeam(db, team.id, name, description);
+    const now = Math.floor(Date.now() / 1000);
+    const start = startDate ? Math.floor(new Date(startDate).getTime() / 1000) : team.start_date;
+    const end = endDate ? Math.floor(new Date(endDate).getTime() / 1000) : team.end_date;
+
+    await updateTeam(db, team.id, name, description, start, end);
     return { success: true };
   },
 
@@ -84,6 +93,21 @@ export const actions: Actions = {
     if (!jeuneId) return fail(400, { removeError: 'Jeune introuvable.' });
 
     await removeJeuneFromTeam(db, team.id, jeuneId);
+    return { success: true };
+  },
+
+  archiveTeam: async ({ params, request, platform, locals }) => {
+    requireAdminOrAnimateur(locals);
+
+    const db = platform!.env.DB;
+    const team = await getTeamById(db, params.id);
+    if (!team) error(404, 'Équipe introuvable.');
+    if (!canManage(locals, team.created_by)) error(403, 'Non autorisé.');
+
+    const data = await request.formData();
+    const archive = data.get('archive') === 'true';
+
+    await archiveTeam(db, team.id, archive);
     return { success: true };
   },
 };

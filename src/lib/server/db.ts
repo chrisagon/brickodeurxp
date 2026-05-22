@@ -929,6 +929,9 @@ export type Team = {
   description: string;
   created_by: string;
   created_at: number;
+  start_date: number;
+  end_date: number;
+  archived: number;
 };
 
 export type TeamWithCount = Team & {
@@ -952,14 +955,22 @@ export async function createTeam(
   db: D1Database,
   name: string,
   description: string,
-  createdBy: string
+  createdBy: string,
+  startDate?: number,
+  endDate?: number,
+  archived?: boolean
 ): Promise<Team> {
   const id = crypto.randomUUID();
+  const now = Math.floor(Date.now() / 1000);
+  const start = startDate ?? now;
+  const end = endDate ?? (now + 365 * 24 * 3600); // 1 an
+  const arch = archived ? 1 : 0;
+
   const team = await db
     .prepare(
-      'INSERT INTO teams (id, name, description, created_by) VALUES (?, ?, ?, ?) RETURNING id, name, description, created_by, created_at'
+      'INSERT INTO teams (id, name, description, created_by, start_date, end_date, archived) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id, name, description, created_by, created_at, start_date, end_date, archived'
     )
-    .bind(id, name, description, createdBy)
+    .bind(id, name, description, createdBy, start, end, arch)
     .first<Team>();
   if (!team) throw new Error("Échec de la création de l'équipe");
   return team;
@@ -969,53 +980,98 @@ export async function updateTeam(
   db: D1Database,
   id: string,
   name: string,
-  description: string
+  description: string,
+  startDate?: number,
+  endDate?: number,
+  archived?: boolean
 ): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  const start = startDate ?? now;
+  const end = endDate ?? (now + 365 * 24 * 3600); // 1 an
+  const arch = archived ? 1 : 0;
+
   await db
-    .prepare('UPDATE teams SET name = ?, description = ? WHERE id = ?')
-    .bind(name, description, id)
+    .prepare('UPDATE teams SET name = ?, description = ?, start_date = ?, end_date = ?, archived = ? WHERE id = ?')
+    .bind(name, description, start, end, arch, id)
     .run();
 }
 
-export async function getTeamById(db: D1Database, id: string): Promise<Team | null> {
+export async function getTeamById(db: D1Database, id: string): Promise<TeamWithCount | null> {
   const result = await db
-    .prepare('SELECT id, name, description, created_by, created_at FROM teams WHERE id = ?')
+    .prepare(
+      `SELECT t.id, t.name, t.description, t.created_by, t.created_at,
+              t.start_date, t.end_date, t.archived,
+              u.prenom AS creator_prenom, u.nom AS creator_nom,
+              COUNT(tm.id) AS member_count
+       FROM teams t
+       JOIN users u ON u.id = t.created_by
+       LEFT JOIN team_members tm ON tm.team_id = t.id
+       WHERE t.id = ?
+       GROUP BY t.id`
+    )
     .bind(id)
-    .first<Team>();
+    .first<TeamWithCount>();
   return result ?? null;
 }
 
-export async function getAllTeams(db: D1Database): Promise<TeamWithCount[]> {
-  const result = await db
-    .prepare(
-      `SELECT t.id, t.name, t.description, t.created_by, t.created_at,
+export async function getAllTeams(db: D1Database, onlyActive: boolean = false): Promise<TeamWithCount[]> {
+  let query = `
+      SELECT t.id, t.name, t.description, t.created_by, t.created_at,
+              t.start_date, t.end_date, t.archived,
               u.prenom AS creator_prenom, u.nom AS creator_nom,
               COUNT(tm.id) AS member_count
        FROM teams t
        JOIN users u ON u.id = t.created_by
-       LEFT JOIN team_members tm ON tm.team_id = t.id
-       GROUP BY t.id
-       ORDER BY t.created_at DESC`
-    )
-    .all<TeamWithCount>();
+       LEFT JOIN team_members tm ON tm.team_id = t.id`;
+
+  const params: any[] = [];
+
+  if (onlyActive) {
+    query += ` WHERE t.archived = 0 AND t.end_date > ?`;
+    params.push(Math.floor(Date.now() / 1000));
+  }
+
+  query += ` GROUP BY t.id ORDER BY t.end_date DESC, t.name ASC`;
+
+  const result = await db.prepare(query).bind(...params).all<TeamWithCount>();
   return result.results;
 }
 
-export async function getTeamsByCreator(db: D1Database, createdBy: string): Promise<TeamWithCount[]> {
-  const result = await db
-    .prepare(
-      `SELECT t.id, t.name, t.description, t.created_by, t.created_at,
+export async function getTeamsByCreator(db: D1Database, createdBy: string, onlyActive: boolean = false): Promise<TeamWithCount[]> {
+  let query = `
+      SELECT t.id, t.name, t.description, t.created_by, t.created_at,
+              t.start_date, t.end_date, t.archived,
               u.prenom AS creator_prenom, u.nom AS creator_nom,
               COUNT(tm.id) AS member_count
        FROM teams t
        JOIN users u ON u.id = t.created_by
        LEFT JOIN team_members tm ON tm.team_id = t.id
-       WHERE t.created_by = ?
-       GROUP BY t.id
-       ORDER BY t.created_at DESC`
+       WHERE t.created_by = ?`;
+
+  const params: any[] = [createdBy];
+
+  if (onlyActive) {
+    query += ` AND t.archived = 0 AND t.end_date > ?`;
+    params.push(Math.floor(Date.now() / 1000));
+  }
+
+  query += ` GROUP BY t.id ORDER BY t.end_date DESC, t.name ASC`;
+
+  const result = await db.prepare(query).bind(...params).all<TeamWithCount>();
+  return result.results;
+}
+
+export async function getTeamsByJeune(db: D1Database, jeuneId: string): Promise<Team[]> {
+  const result = await db
+    .prepare(
+      `SELECT t.id, t.name, t.description, t.created_by, t.created_at
+       FROM team_members tm
+       JOIN teams t ON t.id = tm.team_id
+       WHERE tm.jeune_id = ?
+       ORDER BY t.name`
     )
-    .bind(createdBy)
-    .all<TeamWithCount>();
+    .bind(jeuneId)
+    .all<Team>();
   return result.results;
 }
 
@@ -1032,6 +1088,19 @@ export async function getTeamMembers(db: D1Database, teamId: string): Promise<Te
     .bind(teamId)
     .all<TeamMember>();
   return result.results;
+}
+
+export async function getTeamByJeune(db: D1Database, jeuneId: string): Promise<Team | null> {
+  const result = await db
+    .prepare(
+      `SELECT t.id, t.name, t.description, t.created_by, t.created_at
+       FROM team_members tm
+       JOIN teams t ON t.id = tm.team_id
+       WHERE tm.jeune_id = ?`
+    )
+    .bind(jeuneId)
+    .first<Team>();
+  return result;
 }
 
 export async function getAllJeunes(db: D1Database): Promise<User[]> {
@@ -1086,6 +1155,34 @@ export async function removeJeuneFromTeam(
     .run();
 }
 
+export async function addTeamMember(
+  db: D1Database,
+  teamId: string,
+  jeuneId: string,
+  addedBy: string
+): Promise<void> {
+  await addJeuneToTeam(db, teamId, jeuneId, addedBy);
+}
+
+export async function removeTeamMember(
+  db: D1Database,
+  teamId: string,
+  jeuneId: string
+): Promise<void> {
+  await removeJeuneFromTeam(db, teamId, jeuneId);
+}
+
+export async function deleteTeam(db: D1Database, teamId: string): Promise<void> {
+  await db.prepare('DELETE FROM teams WHERE id = ?').bind(teamId).run();
+}
+
+export async function archiveTeam(db: D1Database, teamId: string, archived: boolean): Promise<void> {
+  await db
+    .prepare('UPDATE teams SET archived = ? WHERE id = ?')
+    .bind(archived ? 1 : 0, teamId)
+    .run();
+}
+
 // ── Leaderboard ───────────────────────────────────────────────────────────────
 
 export type LeaderboardEntry = {
@@ -1137,6 +1234,7 @@ export type ProjectWithMeta = Project & {
   creator_nom: string;
   task_count: number;
   tasks_done_count: number;
+  team_name: string | null;
 };
 
 export type ProjectTask = {
@@ -1148,6 +1246,9 @@ export type ProjectTask = {
   state: 'todo' | 'in_progress' | 'done' | 'delivered';
   created_at: number;
   updated_at: number;
+  updated_by: string | null;
+  updated_by_prenom: string | null;
+  updated_by_nom: string | null;
 };
 
 export type TaskAssignment = {
@@ -1169,6 +1270,27 @@ export type ProjectTaskWithAssignees = ProjectTask & {
   assigned_count: number;
   skills: ProjectTaskSkill[];
 };
+
+export async function getAllProjects(db: D1Database): Promise<ProjectWithMeta[]> {
+  const result = await db
+    .prepare(
+      `SELECT
+        p.id, p.name, p.description, p.start_date, p.end_date,
+        p.team_id, p.created_by, p.created_at,
+        u.prenom AS creator_prenom, u.nom AS creator_nom,
+        COUNT(DISTINCT pt.id) AS task_count,
+        COUNT(DISTINCT CASE WHEN pt.state IN ('done', 'delivered') THEN pt.id END) AS tasks_done_count,
+        t.name AS team_name
+      FROM projects p
+      JOIN users u ON u.id = p.created_by
+      LEFT JOIN project_tasks pt ON pt.project_id = p.id
+      LEFT JOIN teams t ON t.id = p.team_id
+      GROUP BY p.id
+      ORDER BY p.end_date DESC`
+    )
+    .all<ProjectWithMeta>();
+  return result.results;
+}
 
 export async function getProjectsByTeam(
   db: D1Database,
@@ -1245,12 +1367,20 @@ export async function updateProject(
   name: string,
   description: string,
   startDate: number,
-  endDate: number
+  endDate: number,
+  teamId: string | null
 ): Promise<void> {
-  await db
-    .prepare('UPDATE projects SET name = ?, description = ?, start_date = ?, end_date = ? WHERE id = ?')
-    .bind(name, description, startDate, endDate, id)
-    .run();
+  if (teamId && teamId.trim() !== '') {
+    await db
+      .prepare('UPDATE projects SET name = ?, description = ?, start_date = ?, end_date = ?, team_id = ? WHERE id = ?')
+      .bind(name, description, startDate, endDate, teamId, id)
+      .run();
+  } else {
+    await db
+      .prepare('UPDATE projects SET name = ?, description = ?, start_date = ?, end_date = ?, team_id = NULL WHERE id = ?')
+      .bind(name, description, startDate, endDate, id)
+      .run();
+  }
 }
 
 export async function deleteProject(db: D1Database, id: string): Promise<void> {
@@ -1362,13 +1492,14 @@ export async function updateTask(
   title: string,
   description: string,
   state: 'todo' | 'in_progress' | 'done' | 'delivered',
-  skillIds: string[]
+  skillIds: string[],
+  updatedBy: string
 ): Promise<void> {
   const now = Math.floor(Date.now() / 1000);
 
   await db
-    .prepare('UPDATE project_tasks SET title = ?, description = ?, state = ?, updated_at = ? WHERE id = ?')
-    .bind(title, description, state, now, taskId)
+    .prepare('UPDATE project_tasks SET title = ?, description = ?, state = ?, updated_at = ?, updated_by = ? WHERE id = ?')
+    .bind(title, description, state, now, updatedBy, taskId)
     .run();
 
   await db.prepare('DELETE FROM task_skills WHERE task_id = ?').bind(taskId).run();
@@ -1392,18 +1523,20 @@ export async function getTaskById(
     .prepare(
       `SELECT
         pt.id, pt.project_id, pt.order_num, pt.title, pt.description,
-        pt.state, pt.created_at, pt.updated_at,
+        pt.state, pt.created_at, pt.updated_at, pt.updated_by,
+        u.prenom AS updated_by_prenom, u.nom AS updated_by_nom,
         COUNT(DISTINCT ta.jeune_id) AS assigned_count,
         ts.skill_id, s.title AS skill_title, s.description AS skill_description, s.active AS skill_active
       FROM project_tasks pt
       LEFT JOIN task_assignments ta ON ta.task_id = pt.id
       LEFT JOIN task_skills ts ON ts.task_id = pt.id
       LEFT JOIN skills s ON s.id = ts.skill_id
+      LEFT JOIN users u ON u.id = pt.updated_by
       WHERE pt.id = ?
       GROUP BY pt.id, ts.skill_id, s.title, s.description, s.active`
     )
     .bind(taskId)
-    .all<{ id: string; project_id: string; order_num: number; title: string; description: string; state: string; created_at: number; updated_at: number; assigned_count: number; skill_id: string | null; skill_title: string | null; skill_description: string | null; skill_active: number | null }>();
+    .all<{ id: string; project_id: string; order_num: number; title: string; description: string; state: string; created_at: number; updated_at: number; updated_by: string | null; updated_by_prenom: string | null; updated_by_nom: string | null; assigned_count: number; skill_id: string | null; skill_title: string | null; skill_description: string | null; skill_active: number | null }>();
 
   if (rows.results.length === 0) return null;
 
@@ -1417,6 +1550,7 @@ export async function getTaskById(
     state: first.state as 'todo' | 'in_progress' | 'done' | 'delivered',
     created_at: first.created_at,
     updated_at: first.updated_at,
+    updated_by: first.updated_by,
     assigned_count: first.assigned_count,
     skills: []
   };

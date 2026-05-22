@@ -1,24 +1,27 @@
 import { fail, redirect, error } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { getAllTeams, getTeamsByCreator, createTeam } from '$lib/server/db';
+import { getAllTeams, getTeamsByCreator, createTeam, archiveTeam } from '$lib/server/db';
 
 function requireAdminOrAnimateur(locals: App.Locals) {
   const role = locals.session?.user.role;
   if (role !== 'admin' && role !== 'animateur') error(403, 'Accès non autorisé.');
 }
 
-export const load: PageServerLoad = async ({ platform, locals }) => {
+export const load: PageServerLoad = async ({ platform, locals, url }) => {
   requireAdminOrAnimateur(locals);
 
   const db = platform!.env.DB;
   const user = locals.session!.user;
   const isAdmin = user.role === 'admin';
 
-  const teams = isAdmin
-    ? await getAllTeams(db)
-    : await getTeamsByCreator(db, user.id);
+  // Filtre "active" pour n'afficher que les équipes actives
+  const onlyActive = url.searchParams.get('active') !== 'false';
 
-  return { teams, isAdmin };
+  const teams = isAdmin
+    ? await getAllTeams(db, onlyActive)
+    : await getTeamsByCreator(db, user.id, onlyActive);
+
+  return { teams, isAdmin, onlyActive };
 };
 
 export const actions: Actions = {
@@ -31,10 +34,42 @@ export const actions: Actions = {
 
     const name = (data.get('name') as string | null)?.trim() ?? '';
     const description = (data.get('description') as string | null)?.trim() ?? '';
+    const startDate = data.get('start_date') as string | null;
+    const endDate = data.get('end_date') as string | null;
 
     if (!name) return fail(400, { error: 'Le nom de l\'équipe est requis.' });
 
-    const team = await createTeam(db, name, description, user.id);
+    const now = Math.floor(Date.now() / 1000);
+    const start = startDate ? Math.floor(new Date(startDate).getTime() / 1000) : now;
+    const end = endDate ? Math.floor(new Date(endDate).getTime() / 1000) : now + 365 * 24 * 3600;
+
+    const team = await createTeam(db, name, description, user.id, start, end);
     redirect(303, `/animateur/equipes/${team.id}`);
+  },
+
+  archiveTeam: async ({ request, platform, locals }) => {
+    requireAdminOrAnimateur(locals);
+
+    const db = platform!.env.DB;
+    const user = locals.session!.user;
+    const data = await request.formData();
+
+    const teamId = (data.get('team_id') as string | null) ?? '';
+    const archive = data.get('archive') === 'true';
+
+    // Vérifier que l'utilisateur peut gérer cette équipe
+    const team = await db
+      .prepare('SELECT created_by FROM teams WHERE id = ?')
+      .bind(teamId)
+      .first<{ created_by: string }>();
+
+    if (!team) return fail(404, { error: 'Équipe non trouvée.' });
+    if (team.created_by !== user.id && user.role !== 'admin') {
+      return fail(403, { error: 'Accès non autorisé.' });
+    }
+
+    await archiveTeam(db, teamId, archive);
+
+    return { success: true };
   },
 };
