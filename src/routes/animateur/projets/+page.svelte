@@ -6,7 +6,7 @@
   let { data, form }: { data: PageData; form: ActionData } = $props();
 
   let showCreate = $state(false);
-  let newProject = $state({ name: '', description: '', startDate: '', endDate: '' });
+  let newProject = $state({ name: '', description: '', startDate: '', endDate: '', teamId: data.teamId || '' });
 </script>
 
 <div class="max-w-4xl mx-auto">
@@ -18,7 +18,7 @@
       </p>
     </div>
     <button
-      onclick={() => { showCreate = true; newProject = { name: '', description: '', startDate: '', endDate: '' }; }}
+      onclick={() => { showCreate = true; newProject = { name: '', description: '', startDate: '', endDate: '', teamId: data.teamId || '' }; }}
       class="text-sm bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg transition-colors"
     >
       + Nouveau projet
@@ -37,7 +37,7 @@
 
       <form method="POST" action="?/createProject" use:enhance={() => {
         showCreate = false;
-        newProject = { name: '', description: '', startDate: '', endDate: '' };
+        newProject = { name: '', description: '', startDate: '', endDate: '', teamId: '' };
       }}>
         <div class="space-y-4">
           <div>
@@ -85,6 +85,23 @@
               />
             </div>
           </div>
+
+          {#if data.teams && data.teams.length > 0}
+            <div>
+              <label class="block text-xs text-gray-400 mb-1" for="team_id">Équipe *</label>
+              <select
+                id="team_id"
+                name="team_id"
+                required
+                bind:value={newProject.teamId}
+                class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-orange-500"
+              >
+                {#each data.teams as team}
+                  <option value={team.id}>{team.name}</option>
+                {/each}
+              </select>
+            </div>
+          {/if}
 
           <div class="flex gap-2 pt-2">
             <button
@@ -134,6 +151,11 @@
               📅 {new Date(project.start_date * 1000).toLocaleDateString('fr-FR')} -
               {new Date(project.end_date * 1000).toLocaleDateString('fr-FR')}
             </span>
+            {#if project.team_name}
+              <span class="px-2 py-0.5 rounded bg-gray-800 text-gray-400">
+                👥 {project.team_name}
+              </span>
+            {/if}
           </div>
         </a>
       {/each}

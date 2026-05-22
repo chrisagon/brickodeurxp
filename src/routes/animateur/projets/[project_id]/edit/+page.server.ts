@@ -1,6 +1,6 @@
 import { error, redirect } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
-import { getProjectById, getTeamsByJeune, updateProject } from '$lib/server/db';
+import { getProjectById, getTeamsByJeune, updateProject, getAllTeams, getTeamsByCreator } from '$lib/server/db';
 
 function requireAnimateur(locals: App.Locals) {
   if (locals.session?.user.role !== 'animateur' && locals.session?.user.role !== 'admin') {
@@ -34,12 +34,14 @@ export const load: PageServerLoad = async ({ params, platform, locals }) => {
     }
   }
 
-  // Récupérer les équipes accessibles par l'utilisateur
+  // Récupérer les équipes actives accessibles par l'utilisateur
   let teams = [];
   if (locals.session!.user.role === 'admin') {
-    teams = await db.prepare('SELECT id, name FROM teams ORDER BY name').all<{ id: string; name: string }>();
+    // Admin: toutes les équipes actives
+    teams = await getAllTeams(db, true);
   } else {
-    teams = await getTeamsByJeune(db, locals.session!.user.id);
+    // Animateur: seulement ses équipes actives
+    teams = await getTeamsByCreator(db, locals.session!.user.id, true);
   }
 
   return { project, teams };

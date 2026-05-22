@@ -23,12 +23,6 @@
   <h1 class="text-2xl font-bold text-orange-400 mb-6">Modifier le projet</h1>
 
   <!-- Messages -->
-  {#if form?.success}
-    <div class="mb-6 p-4 bg-green-900/30 border border-green-800 rounded-lg text-green-400">
-      Projet mis à jour avec succès !
-    </div>
-  {/if}
-
   {#if form?.error}
     <div class="mb-6 p-4 bg-red-900/30 border border-red-800 rounded-lg text-red-400">
       {form.error}
@@ -98,7 +92,7 @@
             class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-gray-200 focus:outline-none focus:border-orange-500"
           >
             <option value="">-- Aucune équipe --</option>
-            {#each data.teams as team}
+            {#each data.teams.sort((a, b) => a.name.localeCompare(b.name)) as team}
               <option value={team.id}>{team.name}</option>
             {/each}
           </select>
