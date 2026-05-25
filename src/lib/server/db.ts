@@ -1326,10 +1326,12 @@ export async function getProjectById(
         p.id, p.name, p.description, p.start_date, p.end_date,
         p.team_id, p.created_by, p.created_at,
         u.prenom AS creator_prenom, u.nom AS creator_nom,
+        t.name AS team_name,
         COUNT(DISTINCT pt.id) AS task_count,
         COUNT(DISTINCT CASE WHEN pt.state IN ('done', 'delivered') THEN pt.id END) AS tasks_done_count
       FROM projects p
       JOIN users u ON u.id = p.created_by
+      LEFT JOIN teams t ON t.id = p.team_id
       LEFT JOIN project_tasks pt ON pt.project_id = p.id
       WHERE p.id = ?
       GROUP BY p.id`
