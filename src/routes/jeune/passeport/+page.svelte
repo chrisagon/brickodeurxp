@@ -6,7 +6,7 @@
 <div class="max-w-2xl mx-auto">
   <h1 class="text-2xl font-bold text-orange-400 mb-2">Mon Passeport Brickodeurs</h1>
   <p class="text-sm text-gray-400 mb-8">
-    Bonjour {data.user.prenom} ! Voici tes compétences validées.
+    Choisis les compétences cibles que tu veux valider dans ton passeport des Brickodeurs. Un animateur les validera ensuite.
   </p>
 
   {#each data.passeport as dp}
