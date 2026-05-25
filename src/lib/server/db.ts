@@ -905,6 +905,57 @@ export async function getUnreadCounts(
   return Object.fromEntries(result.results.map((r) => [r.from_id, r.cnt]));
 }
 
+export type InboxEntry = {
+  other_id: string;
+  other_prenom: string;
+  other_nom: string;
+  other_role: string;
+  last_message: string;
+  last_at: number;
+  unread_count: number;
+};
+
+export async function getInbox(
+  db: D1Database,
+  userId: string
+): Promise<InboxEntry[]> {
+  const result = await db
+    .prepare(
+      `SELECT
+        u.id AS other_id,
+        u.prenom AS other_prenom,
+        u.nom AS other_nom,
+        u.role AS other_role,
+        last_msg.content AS last_message,
+        last_msg.created_at AS last_at,
+        COALESCE(unread.cnt, 0) AS unread_count
+       FROM (
+         SELECT
+           CASE WHEN from_id = ? THEN to_id ELSE from_id END AS other_id,
+           MAX(created_at) AS last_at
+         FROM messages
+         WHERE from_id = ? OR to_id = ?
+         GROUP BY other_id
+       ) conv
+       JOIN users u ON u.id = conv.other_id
+       JOIN messages last_msg ON last_msg.created_at = conv.last_at
+         AND (
+           (last_msg.from_id = ? AND last_msg.to_id = conv.other_id)
+           OR (last_msg.from_id = conv.other_id AND last_msg.to_id = ?)
+         )
+       LEFT JOIN (
+         SELECT from_id, COUNT(*) AS cnt
+         FROM messages
+         WHERE to_id = ? AND read_at IS NULL
+         GROUP BY from_id
+       ) unread ON unread.from_id = conv.other_id
+       ORDER BY conv.last_at DESC`
+    )
+    .bind(userId, userId, userId, userId, userId, userId)
+    .all<InboxEntry>();
+  return result.results;
+}
+
 export async function getDirectoryUsers(
   db: D1Database,
   excludeId: string
