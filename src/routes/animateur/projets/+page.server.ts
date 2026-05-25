@@ -22,21 +22,26 @@ export const load: PageServerLoad = async ({ platform, locals }) => {
     let noTeam = false;
 
     if (user.role === 'animateur') {
-      // Récupérer l'équipe créée par l'animateur qui est active
-      const teamRow = await db
-        .prepare('SELECT id, name FROM teams WHERE created_by = ? AND archived = 0 AND end_date > ? LIMIT 1')
+      // Récupérer toutes les équipes actives créées par l'animateur
+      const teamRows = await db
+        .prepare('SELECT id, name FROM teams WHERE created_by = ? AND archived = 0 AND end_date > ? ORDER BY name')
         .bind(user.id, Math.floor(Date.now() / 1000))
-        .first<{ id: string; name: string }>();
+        .all<{ id: string; name: string }>();
 
-      if (!teamRow) {
+      teams = teamRows.results;
+
+      if (teams.length === 0) {
         noTeam = true;
       } else {
-        teamId = teamRow.id;
-        teams.push(teamRow);
+        teamId = teams[0].id;
       }
 
-      // Récupérer les projets de cette équipe
-      const projects = teamId ? await getProjectsByTeam(db, teamId) : [];
+      // Récupérer les projets de toutes les équipes de l'animateur
+      const projects: any[] = [];
+      for (const team of teams) {
+        const teamProjects = await getProjectsByTeam(db, team.id);
+        projects.push(...teamProjects);
+      }
       return { projects, teams, teamId, isAdmin: false, noTeam };
     }
 
@@ -102,7 +107,7 @@ export const actions: Actions = {
       // Si aucune équipe sélectionnée, utiliser leur équipe par défaut
       const selectedTeamId = teamId || await (async () => {
         const teamRow = await db
-          .prepare('SELECT id FROM teams WHERE created_by = ? AND archived = 0 AND end_date > ? LIMIT 1')
+          .prepare('SELECT id FROM teams WHERE created_by = ? AND archived = 0 AND end_date > ? ORDER BY name LIMIT 1')
           .bind(user.id, Math.floor(Date.now() / 1000))
           .first<{ id: string }>();
         return teamRow?.id ?? '';
