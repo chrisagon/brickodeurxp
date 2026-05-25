@@ -1,12 +1,16 @@
 import type { PageServerLoad } from './$types';
-import { getTasksByJeune } from '$lib/server/db';
+import { getTasksByJeune, getTeamByJeune, getProjectsByTeam } from '$lib/server/db';
 
 export const load: PageServerLoad = async ({ platform, locals }) => {
   const db = platform!.env.DB;
   const jeuneId = locals.session!.user.id;
 
-  // Récupérer les tâches assignées à ce jeune
-  const tasks = await getTasksByJeune(db, jeuneId);
+  const [assignedTasks, team] = await Promise.all([
+    getTasksByJeune(db, jeuneId),
+    getTeamByJeune(db, jeuneId)
+  ]);
 
-  return { tasks, user: locals.session!.user };
+  const teamProjects = team ? await getProjectsByTeam(db, team.id) : [];
+
+  return { assignedTasks, teamProjects, team, user: locals.session!.user };
 };
