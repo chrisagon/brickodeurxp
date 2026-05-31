@@ -1,6 +1,6 @@
 import { error, redirect } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
-import { getProjectById, getTeamsByJeune, updateProject, getAllTeams, getTeamsByCreator } from '$lib/server/db';
+import { getProjectById, updateProject, getAllTeams } from '$lib/server/db';
 
 function requireAnimateur(locals: App.Locals) {
   if (locals.session?.user.role !== 'animateur' && locals.session?.user.role !== 'admin') {
@@ -18,31 +18,8 @@ export const load: PageServerLoad = async ({ params, platform, locals }) => {
     error(404, 'Projet introuvable.');
   }
 
-  // Vérifier que l'utilisateur a accès à ce projet
-  if (locals.session!.user.role !== 'admin') {
-    const teamMember = await db
-      .prepare('SELECT 1 FROM team_members WHERE team_id = ? AND jeune_id = ?')
-      .bind(project.team_id || '', locals.session!.user.id)
-      .first();
-    const projectCreator = await db
-      .prepare('SELECT 1 FROM projects WHERE id = ? AND created_by = ?')
-      .bind(params.project_id, locals.session!.user.id)
-      .first();
-
-    if (!teamMember && !projectCreator) {
-      error(403, 'Accès non autorisé à ce projet.');
-    }
-  }
-
-  // Récupérer les équipes actives accessibles par l'utilisateur
-  let teams = [];
-  if (locals.session!.user.role === 'admin') {
-    // Admin: toutes les équipes actives
-    teams = await getAllTeams(db, true);
-  } else {
-    // Animateur: seulement ses équipes actives
-    teams = await getTeamsByCreator(db, locals.session!.user.id, true);
-  }
+  // Tous les animateurs et admins peuvent modifier tous les projets ; toutes les équipes actives sont disponibles.
+  const teams = await getAllTeams(db, true);
 
   return { project, teams };
 };
@@ -62,22 +39,6 @@ export const actions: Actions = {
     // Récupérer le projet existant
     const project = await getProjectById(db, params.project_id);
     if (!project) error(404, 'Projet introuvable.');
-
-    // Vérifier que l'utilisateur a le droit de modifier
-    if (locals.session!.user.role !== 'admin') {
-      const teamMember = await db
-        .prepare('SELECT 1 FROM team_members WHERE team_id = ? AND jeune_id = ?')
-        .bind(project.team_id || '', locals.session!.user.id)
-        .first();
-      const projectCreator = await db
-        .prepare('SELECT 1 FROM projects WHERE id = ? AND created_by = ?')
-        .bind(params.project_id, locals.session!.user.id)
-        .first();
-
-      if (!teamMember && !projectCreator) {
-        error(403, 'Accès non autorisé à ce projet.');
-      }
-    }
 
     // Convertir les dates en timestamps
     const startDate = startDateStr ? Math.floor(new Date(startDateStr).getTime() / 1000) : null;

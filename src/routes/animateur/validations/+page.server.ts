@@ -4,6 +4,7 @@ import {
   getPendingRequests,
   approveRequest,
   rejectRequest,
+  requestCompletion,
   getParentsByChild,
   getRequestById,
   getUserById,
@@ -90,6 +91,27 @@ export const actions: Actions = {
       return { rejected: true };
     } catch (e) {
       return fail(400, { error: e instanceof Error ? e.message : 'Erreur lors du refus.' });
+    }
+  },
+
+  requestCompletion: async ({ request, locals, platform }) => {
+    const data = await request.formData();
+    const request_id = String(data.get('request_id') ?? '');
+    const comment = String(data.get('comment') ?? '');
+
+    if (!request_id) return fail(400, { error: 'ID de demande manquant.' });
+    if (!comment.trim()) return fail(400, { error: 'Précisez ce que le jeune doit compléter.' });
+
+    try {
+      await requestCompletion(
+        platform!.env.DB,
+        request_id,
+        locals.session!.user.id,
+        comment
+      );
+      return { toComplete: true };
+    } catch (e) {
+      return fail(400, { error: e instanceof Error ? e.message : 'Erreur lors de la demande de complément.' });
     }
   },
 };

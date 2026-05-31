@@ -73,12 +73,14 @@
             <div class="space-y-1 p-2">
               {#each cp.skills as skill}
                 <div class="flex items-center justify-between px-3 py-2 rounded-lg
-                  {skill.approved ? 'bg-gray-700/30' : skill.rejectedRequest ? 'bg-red-900/10' : 'bg-transparent'}">
+                  {skill.approved ? 'bg-gray-700/30' : skill.rejectedRequest ? 'bg-red-900/10' : skill.toCompleteRequest ? 'bg-amber-900/10' : 'bg-transparent'}">
                   <div class="flex items-center gap-2 flex-1 min-w-0">
                     {#if skill.approved}
                       <span class="text-green-400 text-sm w-5 text-center flex-shrink-0">✓</span>
                     {:else if skill.pendingRequest}
                       <span class="text-yellow-400 text-sm w-5 text-center flex-shrink-0">⏳</span>
+                    {:else if skill.toCompleteRequest}
+                      <span class="text-amber-400 text-sm w-5 text-center flex-shrink-0">✎</span>
                     {:else if skill.rejectedRequest}
                       <span class="text-red-400 text-sm w-5 text-center flex-shrink-0">✗</span>
                     {:else}
@@ -97,9 +99,12 @@
                       {#if skill.rejectedRequest && skill.rejectionComment}
                         <p class="text-xs text-red-400/70 mt-0.5">Refusé : {skill.rejectionComment}</p>
                       {/if}
+                      {#if skill.toCompleteRequest && skill.toCompleteComment}
+                        <p class="text-xs text-amber-400/80 mt-0.5">À compléter : {skill.toCompleteComment}</p>
+                      {/if}
                     </div>
                   </div>
-                  {#if !skill.approved && !skill.pendingRequest && !skill.rejectedRequest}
+                  {#if !skill.approved && !skill.pendingRequest && !skill.rejectedRequest && !skill.toCompleteRequest}
                     <a
                       href="/jeune/demande/{skill.id}"
                       class="text-xs bg-orange-500/20 hover:bg-orange-500/40 text-orange-400 px-3 py-1 rounded-lg transition-colors whitespace-nowrap ml-2"
@@ -107,7 +112,19 @@
                       Soumettre
                     </a>
                   {:else if skill.pendingRequest}
-                    <span class="text-xs text-yellow-500/60 ml-2 whitespace-nowrap">En attente</span>
+                    <a
+                      href="/jeune/demande/{skill.id}"
+                      class="text-xs bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 px-3 py-1 rounded-lg transition-colors whitespace-nowrap ml-2"
+                    >
+                      Modifier
+                    </a>
+                  {:else if skill.toCompleteRequest}
+                    <a
+                      href="/jeune/demande/{skill.id}"
+                      class="text-xs bg-amber-500/20 hover:bg-amber-500/40 text-amber-400 px-3 py-1 rounded-lg transition-colors whitespace-nowrap ml-2"
+                    >
+                      Compléter
+                    </a>
                   {:else if skill.rejectedRequest}
                     <a
                       href="/jeune/demande/{skill.id}"
@@ -135,12 +152,14 @@
             <div class="space-y-1 p-2">
               {#each dp.uncategorizedSkills as skill}
                 <div class="flex items-center justify-between px-3 py-2 rounded-lg
-                  {skill.approved ? 'bg-gray-700/30' : skill.rejectedRequest ? 'bg-red-900/10' : 'bg-transparent'}">
+                  {skill.approved ? 'bg-gray-700/30' : skill.rejectedRequest ? 'bg-red-900/10' : skill.toCompleteRequest ? 'bg-amber-900/10' : 'bg-transparent'}">
                   <div class="flex items-center gap-2 flex-1 min-w-0">
                     {#if skill.approved}
                       <span class="text-green-400 text-sm w-5 text-center flex-shrink-0">✓</span>
                     {:else if skill.pendingRequest}
                       <span class="text-yellow-400 text-sm w-5 text-center flex-shrink-0">⏳</span>
+                    {:else if skill.toCompleteRequest}
+                      <span class="text-amber-400 text-sm w-5 text-center flex-shrink-0">✎</span>
                     {:else if skill.rejectedRequest}
                       <span class="text-red-400 text-sm w-5 text-center flex-shrink-0">✗</span>
                     {:else}
@@ -150,7 +169,7 @@
                       {skill.title}
                     </p>
                   </div>
-                  {#if !skill.approved && !skill.pendingRequest && !skill.rejectedRequest}
+                  {#if !skill.approved && !skill.pendingRequest && !skill.rejectedRequest && !skill.toCompleteRequest}
                     <a
                       href="/jeune/demande/{skill.id}"
                       class="text-xs bg-orange-500/20 hover:bg-orange-500/40 text-orange-400 px-3 py-1 rounded-lg transition-colors whitespace-nowrap ml-2"
@@ -158,7 +177,19 @@
                       Soumettre
                     </a>
                   {:else if skill.pendingRequest}
-                    <span class="text-xs text-yellow-500/60 ml-2 whitespace-nowrap">En attente</span>
+                    <a
+                      href="/jeune/demande/{skill.id}"
+                      class="text-xs bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 px-3 py-1 rounded-lg transition-colors whitespace-nowrap ml-2"
+                    >
+                      Modifier
+                    </a>
+                  {:else if skill.toCompleteRequest}
+                    <a
+                      href="/jeune/demande/{skill.id}"
+                      class="text-xs bg-amber-500/20 hover:bg-amber-500/40 text-amber-400 px-3 py-1 rounded-lg transition-colors whitespace-nowrap ml-2"
+                    >
+                      Compléter
+                    </a>
                   {:else if skill.rejectedRequest}
                     <a
                       href="/jeune/demande/{skill.id}"

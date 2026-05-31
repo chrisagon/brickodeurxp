@@ -75,7 +75,7 @@ export const POST: RequestHandler = async ({ request, params, platform, locals }
     error(403, 'Accès non autorisé à ce projet.');
   }
 
-  const data = await request.json();
+  const data = (await request.json()) as { action?: string; [key: string]: any };
   const { action, ...body } = data;
 
   if (action === 'create') {
@@ -109,7 +109,7 @@ export const POST: RequestHandler = async ({ request, params, platform, locals }
       return new Response(JSON.stringify({ error: 'ID de tâche requis' }), { status: 400 });
     }
 
-    await updateTask(db, taskId, title, description, state, skillIds);
+    await updateTask(db, taskId, title, description, state, skillIds, user.id);
     return new Response(JSON.stringify({ success: true }), { status: 200 });
   }
 

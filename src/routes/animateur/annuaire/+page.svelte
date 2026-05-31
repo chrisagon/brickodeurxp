@@ -9,7 +9,7 @@
   let roleFilter = $state<'all' | 'jeune' | 'animateur'>('all');
 
   const filtered = $derived(
-    data.users.filter(u => {
+    data.users.filter((u: (typeof data.users)[number]) => {
       const matchRole = roleFilter === 'all' || u.role === roleFilter;
       const q = search.trim().toLowerCase();
       const matchSearch = !q ||

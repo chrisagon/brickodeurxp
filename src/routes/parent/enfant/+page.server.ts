@@ -39,17 +39,25 @@ export const load: PageServerLoad = async ({ locals, platform }) => {
       getBadgeRequestsByJeune(db, child.id),
     ]);
 
-    const badgeSkillIds = new Set(badges.map((b) => b.skill_id));
+    // Les compétences validées proviennent des demandes approuvées
+    const approvedSkillIds = new Set(
+      requests.filter((r) => r.status === 'approved').map((r) => r.skill_id)
+    );
     const pendingSkillIds = new Set(
       requests.filter((r) => r.status === 'pending').map((r) => r.skill_id)
     );
+    // Les badges sont attribués par catégorie
+    const badgeCategoryIds = new Set(badges.map((b) => b.category_id));
 
     const passeport: DomainRow[] = [];
 
     for (const domain of domains) {
       const skills = await getSkillsByDomain(db, domain.id);
-      const domainBadgeCount = badges.filter((b) =>
-        skills.some((s) => s.id === b.skill_id)
+      const domainCategoryIds = new Set(
+        skills.map((s) => s.category_id).filter((id): id is string => !!id)
+      );
+      const domainBadgeCount = Array.from(domainCategoryIds).filter((id) =>
+        badgeCategoryIds.has(id)
       ).length;
       const level = calculateLevel(domainBadgeCount);
 
@@ -59,7 +67,7 @@ export const load: PageServerLoad = async ({ locals, platform }) => {
           id: s.id,
           title: s.title,
           description: s.description,
-          hasBadge: badgeSkillIds.has(s.id),
+          hasBadge: approvedSkillIds.has(s.id),
           pendingRequest: pendingSkillIds.has(s.id),
         })),
         badgeCount: domainBadgeCount,

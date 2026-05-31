@@ -58,9 +58,10 @@ export const actions: Actions = {
 
     try {
       await updateTask(db, params.task_id, task.title, description, state, skillIds, locals.session!.user.id);
-      return { success: true };
     } catch (err) {
       return { error: 'Échec de la mise à jour de la tâche' };
     }
+
+    redirect(303, `/animateur/projets/${task.project_id}`);
   },
 };

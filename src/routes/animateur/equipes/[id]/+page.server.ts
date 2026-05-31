@@ -16,9 +16,10 @@ function requireAdminOrAnimateur(locals: App.Locals) {
   if (role !== 'admin' && role !== 'animateur') error(403, 'Accès non autorisé.');
 }
 
-function canManage(locals: App.Locals, createdBy: string): boolean {
-  const user = locals.session!.user;
-  return user.role === 'admin' || user.id === createdBy;
+function canManage(locals: App.Locals, _createdBy: string): boolean {
+  // Tous les animateurs et admins peuvent gérer n'importe quelle équipe.
+  const role = locals.session!.user.role;
+  return role === 'admin' || role === 'animateur';
 }
 
 export const load: PageServerLoad = async ({ params, platform, locals }) => {
@@ -56,7 +57,6 @@ export const actions: Actions = {
 
     if (!name) return fail(400, { editError: 'Le nom est requis.' });
 
-    const now = Math.floor(Date.now() / 1000);
     const start = startDate ? Math.floor(new Date(startDate).getTime() / 1000) : team.start_date;
     const end = endDate ? Math.floor(new Date(endDate).getTime() / 1000) : team.end_date;
 

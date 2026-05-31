@@ -20,3 +20,7 @@ export async function uploadProof(bucket: R2Bucket, key: string, file: File): Pr
     httpMetadata: { contentType: file.type },
   });
 }
+
+export async function deleteProof(bucket: R2Bucket, key: string): Promise<void> {
+  await bucket.delete(key);
+}

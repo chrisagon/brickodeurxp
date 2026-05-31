@@ -1,13 +1,24 @@
 <script lang="ts">
+  import { page } from '$app/state';
   import type { LayoutData } from './$types';
   let { children, data }: { children: any; data: LayoutData } = $props();
+
+  function isActive(href: string): boolean {
+    const path = page.url.pathname;
+    return path === href || path.startsWith(href + '/');
+  }
+
+  const linkClass = (href: string) =>
+    isActive(href)
+      ? 'text-sm text-orange-400 font-medium'
+      : 'text-sm text-gray-400 hover:text-orange-400';
 </script>
 
 <div class="max-w-4xl mx-auto">
   <nav class="flex flex-wrap gap-4 mb-6 border-b border-gray-800 pb-3">
-    <a href="/jeune/passeport" class="text-sm text-gray-400 hover:text-orange-400">Mon passeport</a>
-    <a href="/jeune/projets" class="text-sm text-gray-400 hover:text-orange-400">Mes projets</a>
-    <a href="/jeune/messages" class="relative text-sm text-gray-400 hover:text-orange-400">
+    <a href="/jeune/passeport" class={linkClass('/jeune/passeport')}>Mon passeport</a>
+    <a href="/jeune/projets" class={linkClass('/jeune/projets')}>Mes projets</a>
+    <a href="/jeune/messages" class="relative {linkClass('/jeune/messages')}">
       Messages
       {#if data.totalUnread > 0}
         <span class="absolute -top-1.5 -right-3 bg-orange-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">

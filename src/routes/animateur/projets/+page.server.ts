@@ -1,6 +1,6 @@
 import { error, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { getProjectsByTeam, createProject, getAllTeams, getTeamById } from '$lib/server/db';
+import { getProjectsByTeam, createProject, getAllTeams } from '$lib/server/db';
 
 function requireAnimateur(locals: App.Locals) {
   const role = locals.session?.user.role;
@@ -16,49 +16,19 @@ export const load: PageServerLoad = async ({ platform, locals }) => {
   const user = locals.session!.user;
 
   try {
-    // Récupérer les équipes actives selon le rôle
-    let teams: { id: string; name: string }[] = [];
-    let teamId = '';
-    let noTeam = false;
+    // Tous les animateurs et admins voient toutes les équipes actives et tous leurs projets.
+    const teams = await getAllTeams(db, true); // onlyActive = true
 
-    if (user.role === 'animateur') {
-      // Récupérer toutes les équipes actives créées par l'animateur
-      const teamRows = await db
-        .prepare('SELECT id, name FROM teams WHERE created_by = ? AND archived = 0 AND end_date > ? ORDER BY name')
-        .bind(user.id, Math.floor(Date.now() / 1000))
-        .all<{ id: string; name: string }>();
-
-      teams = teamRows.results;
-
-      if (teams.length === 0) {
-        noTeam = true;
-      } else {
-        teamId = teams[0].id;
-      }
-
-      // Récupérer les projets de toutes les équipes de l'animateur
-      const projects: any[] = [];
-      for (const team of teams) {
-        const teamProjects = await getProjectsByTeam(db, team.id);
-        projects.push(...teamProjects);
-      }
-      return { projects, teams, teamId, isAdmin: false, noTeam };
+    const projects: any[] = [];
+    for (const team of teams) {
+      const teamProjects = await getProjectsByTeam(db, team.id);
+      projects.push(...teamProjects);
     }
 
-    // Pour les admins, afficher tous les projets avec toutes les équipes actives
-    if (user.role === 'admin') {
-      teams = await getAllTeams(db, true); // onlyActive = true
-      const projects: any[] = [];
+    const teamId = teams.length > 0 ? teams[0].id : '';
+    const noTeam = teams.length === 0;
 
-      for (const team of teams) {
-        const teamProjects = await getProjectsByTeam(db, team.id);
-        projects.push(...teamProjects);
-      }
-
-      return { projects, teams, teamId: '', isAdmin: true, noTeam: false };
-    }
-
-    return { projects: [], teams, teamId: '', isAdmin: false, noTeam: false };
+    return { projects, teams, teamId, isAdmin: user.role === 'admin', noTeam };
   } catch (err) {
     console.error('Error loading projects:', err);
     error(500, 'Erreur lors du chargement des projets.');

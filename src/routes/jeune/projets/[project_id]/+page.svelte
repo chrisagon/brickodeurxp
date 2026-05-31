@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { PageData } from './$types';
+  import { goto } from '$app/navigation';
 
   let { data }: { data: PageData } = $props();
 
@@ -10,8 +11,56 @@
     delivered: 'Livrée'
   };
 
-  function getTasksByState(tasks: any[], state: string) {
-    return tasks.filter(t => t.state === state);
+  let tasks = $state(data.tasks);
+  $effect(() => {
+    tasks = data.tasks;
+  });
+
+  let draggingId = $state<string | null>(null);
+  let dragOverState = $state<string | null>(null);
+
+  function getTasksByState(list: any[], state: string) {
+    return list.filter(t => t.state === state);
+  }
+
+  function handleDragStart(e: DragEvent, taskId: string) {
+    draggingId = taskId;
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', taskId);
+    }
+  }
+
+  function handleDragEnd() {
+    draggingId = null;
+    dragOverState = null;
+  }
+
+  async function handleDrop(e: DragEvent, newState: string) {
+    e.preventDefault();
+    dragOverState = null;
+    const taskId = draggingId ?? e.dataTransfer?.getData('text/plain');
+    draggingId = null;
+    if (!taskId) return;
+
+    const task = tasks.find(t => t.id === taskId);
+    if (!task || task.state === newState) return;
+
+    const previousState = task.state;
+    task.state = newState as typeof task.state; // optimiste
+
+    const body = new FormData();
+    body.set('taskId', taskId);
+    body.set('state', newState);
+
+    try {
+      const res = await fetch('?/updateState', { method: 'POST', body });
+      if (!res.ok) throw new Error('http');
+      const result = (await res.json()) as { type?: string };
+      if (result.type === 'failure' || result.type === 'error') throw new Error('action');
+    } catch {
+      task.state = previousState; // rollback
+    }
   }
 </script>
 
@@ -37,11 +86,23 @@
           <span class="font-medium text-sm text-gray-300">{stateLabels[state]}</span>
         </div>
 
-        <div class="space-y-3">
-          {#each getTasksByState(data.tasks, state) as task (task.id)}
-            <a
-              href="/jeune/projets/{data.project.id}/tasks/{task.id}"
-              class="block bg-gray-900 rounded-lg p-4 border border-gray-800 hover:border-gray-700 transition-colors"
+        <div
+          role="list"
+          class="space-y-3 flex-1 min-h-[80px] rounded-lg transition-colors {dragOverState === state ? 'bg-orange-500/5 ring-2 ring-orange-500/40' : ''}"
+          ondragover={(e) => { e.preventDefault(); dragOverState = state; }}
+          ondragleave={() => { if (dragOverState === state) dragOverState = null; }}
+          ondrop={(e) => handleDrop(e, state)}
+        >
+          {#each getTasksByState(tasks, state) as task (task.id)}
+            <div
+              role="listitem"
+              draggable="true"
+              ondragstart={(e) => handleDragStart(e, task.id)}
+              ondragend={handleDragEnd}
+              onclick={() => goto(`/jeune/projets/${data.project.id}/tasks/${task.id}`)}
+              onkeydown={(e) => { if (e.key === 'Enter') goto(`/jeune/projets/${data.project.id}/tasks/${task.id}`); }}
+              tabindex="0"
+              class="block bg-gray-900 rounded-lg p-4 border border-gray-800 hover:border-gray-700 transition-colors cursor-grab active:cursor-grabbing {draggingId === task.id ? 'opacity-50' : ''}"
             >
               <div class="flex items-start justify-between mb-2">
                 <span class="text-xs text-gray-600 font-mono">#{task.order_num}</span>
@@ -67,10 +128,10 @@
                   {/each}
                 </div>
               {/if}
-            </a>
+            </div>
           {:else}
             <div class="h-20 border-2 border-dashed border-gray-800 rounded-lg flex items-center justify-center text-gray-700 text-sm">
-              Aucune tâche
+              Déposez une tâche ici
             </div>
           {/each}
         </div>

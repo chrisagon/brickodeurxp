@@ -21,12 +21,6 @@
   <h1 class="text-2xl font-bold text-orange-400 mb-6">Tâche #{data.task.order_num}</h1>
 
   <!-- Messages -->
-  {#if form?.success}
-    <div class="mb-6 p-4 bg-green-900/30 border border-green-800 rounded-lg text-green-400">
-      Tâche mise à jour avec succès !
-    </div>
-  {/if}
-
   {#if form?.error}
     <div class="mb-6 p-4 bg-red-900/30 border border-red-800 rounded-lg text-red-400">
       {form.error}
@@ -75,7 +69,7 @@
       >
         {#each Object.keys(stateLabels) as state}
           <option value={state} selected={state === data.task.state}>
-            {stateLabels[state]}
+            {stateLabels[state as keyof typeof stateLabels]}
           </option>
         {/each}
       </select>

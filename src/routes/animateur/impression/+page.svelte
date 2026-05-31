@@ -5,8 +5,8 @@
 
   let { data } = $props<{ data: PageData }>();
 
-  const pending = $derived(data.badges.filter((b) => !b.printed_by));
-  const done    = $derived(data.badges.filter((b) =>  b.printed_by));
+  const pending = $derived(data.badges.filter((b: (typeof data.badges)[number]) => !b.printed_by));
+  const done    = $derived(data.badges.filter((b: (typeof data.badges)[number]) =>  b.printed_by));
 </script>
 
 <div class="max-w-3xl mx-auto">

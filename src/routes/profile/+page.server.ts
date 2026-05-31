@@ -1,6 +1,12 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
-import { getUserByEmail, updateUser } from '$lib/server/db';
+import {
+  getUserByEmail,
+  updateUser,
+  getUserPasswordHash,
+  updateUserPassword
+} from '$lib/server/db';
+import { hashPassword, verifyPassword } from '$lib/server/auth';
 
 export const load: PageServerLoad = async ({ locals }) => {
   if (!locals.session) {
@@ -10,7 +16,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 };
 
 export const actions: Actions = {
-  default: async ({ request, locals, platform }) => {
+  updateProfile: async ({ request, locals, platform }) => {
     if (!locals.session) {
       redirect(303, '/auth/login');
     }
@@ -46,4 +52,46 @@ export const actions: Actions = {
 
     redirect(303, '/');
   },
+
+  updatePassword: async ({ request, locals, platform }) => {
+    if (!locals.session) {
+      redirect(303, '/auth/login');
+    }
+
+    const data = await request.formData();
+    const currentPassword = String(data.get('currentPassword') ?? '');
+    const newPassword = String(data.get('newPassword') ?? '');
+    const confirmPassword = String(data.get('confirmPassword') ?? '');
+
+    if (!newPassword || !confirmPassword) {
+      return fail(400, { passwordError: 'Veuillez renseigner le nouveau mot de passe.' });
+    }
+
+    if (newPassword.length < 8) {
+      return fail(400, { passwordError: 'Le mot de passe doit contenir au moins 8 caractères.' });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return fail(400, { passwordError: 'Les mots de passe ne correspondent pas.' });
+    }
+
+    const db = platform!.env.DB;
+    const currentHash = await getUserPasswordHash(db, locals.session.user.id);
+
+    // Si un mot de passe existe déjà, exiger et vérifier l'actuel.
+    if (currentHash) {
+      if (!currentPassword) {
+        return fail(400, { passwordError: 'Veuillez saisir votre mot de passe actuel.' });
+      }
+      const valid = await verifyPassword(currentPassword, currentHash);
+      if (!valid) {
+        return fail(400, { passwordError: 'Mot de passe actuel incorrect.' });
+      }
+    }
+
+    const newHash = await hashPassword(newPassword);
+    await updateUserPassword(db, locals.session.user.id, newHash);
+
+    return { passwordSuccess: true };
+  }
 };

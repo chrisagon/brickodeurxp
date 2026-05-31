@@ -64,7 +64,7 @@ export type BadgeRequest = {
   id: string;
   jeune_id: string;
   skill_id: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'to_complete';
   proof_url: string;
   proof_type: 'photo' | 'video';
   submitted_at: number;
@@ -121,6 +121,21 @@ export async function getUserById(db: D1Database, id: string): Promise<User | nu
     .bind(id)
     .first<User>();
   return result ?? null;
+}
+
+export async function getUserPasswordHash(db: D1Database, id: string): Promise<string | null> {
+  const result = await db
+    .prepare('SELECT password_hash FROM users WHERE id = ?')
+    .bind(id)
+    .first<{ password_hash: string | null }>();
+  return result?.password_hash ?? null;
+}
+
+export async function updateUserPassword(db: D1Database, id: string, passwordHash: string): Promise<void> {
+  await db
+    .prepare('UPDATE users SET password_hash = ? WHERE id = ?')
+    .bind(passwordHash, id)
+    .run();
 }
 
 export async function getAllDomains(db: D1Database): Promise<Domain[]> {
@@ -588,6 +603,68 @@ export async function rejectRequest(
     const existing = await getRequestById(db, requestId);
     if (!existing) throw new Error('Demande introuvable');
     throw new Error('Demande déjà traitée');
+  }
+}
+
+// L'animateur marque une demande « à compléter » : le jeune devra renvoyer de nouvelles preuves.
+export async function requestCompletion(
+  db: D1Database,
+  requestId: string,
+  reviewerId: string,
+  comment: string
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  const updateResult = await db
+    .prepare(
+      'UPDATE badge_requests SET status = ?, reviewer_id = ?, reviewer_comment = ?, reviewed_at = ? WHERE id = ? AND status = ?'
+    )
+    .bind('to_complete', reviewerId, comment, now, requestId, 'pending')
+    .run();
+
+  if (updateResult.meta.changes === 0) {
+    const existing = await getRequestById(db, requestId);
+    if (!existing) throw new Error('Demande introuvable');
+    throw new Error('Demande déjà traitée');
+  }
+}
+
+// Le jeune met à jour une demande modifiable (pending ou to_complete) :
+// remplace la preuve et/ou le fichier projet, met à jour le commentaire,
+// et repasse le statut à 'pending' pour une nouvelle revue.
+export async function updateBadgeRequestProof(
+  db: D1Database,
+  requestId: string,
+  jeuneId: string,
+  proofUrl: string,
+  proofType: 'photo' | 'video',
+  jeuneComment: string | null,
+  projectUrl: string | null,
+  projectType: string | null
+): Promise<void> {
+  const updateResult = await db
+    .prepare(
+      `UPDATE badge_requests
+       SET proof_url = ?, proof_type = ?, jeune_comment = ?, project_url = ?, project_type = ?,
+           status = 'pending', reviewer_id = NULL, reviewer_comment = NULL, reviewed_at = NULL,
+           submitted_at = ?
+       WHERE id = ? AND jeune_id = ? AND status IN ('pending','to_complete')`
+    )
+    .bind(
+      proofUrl,
+      proofType,
+      jeuneComment,
+      projectUrl,
+      projectType,
+      Math.floor(Date.now() / 1000),
+      requestId,
+      jeuneId
+    )
+    .run();
+
+  if (updateResult.meta.changes === 0) {
+    const existing = await getRequestById(db, requestId);
+    if (!existing) throw new Error('Demande introuvable');
+    throw new Error('Cette demande ne peut plus être modifiée');
   }
 }
 
@@ -1477,6 +1554,9 @@ export async function getTasksByProject(
         state: row.state as 'todo' | 'in_progress' | 'done' | 'delivered',
         created_at: row.created_at,
         updated_at: row.updated_at,
+        updated_by: null,
+        updated_by_prenom: null,
+        updated_by_nom: null,
         assigned_count: row.assigned_count,
         skills: []
       };
@@ -1564,6 +1644,19 @@ export async function updateTask(
   }
 }
 
+export async function updateTaskState(
+  db: D1Database,
+  taskId: string,
+  state: 'todo' | 'in_progress' | 'done' | 'delivered',
+  updatedBy: string
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await db
+    .prepare('UPDATE project_tasks SET state = ?, updated_at = ?, updated_by = ? WHERE id = ?')
+    .bind(state, now, updatedBy, taskId)
+    .run();
+}
+
 export async function deleteTask(db: D1Database, taskId: string): Promise<void> {
   await db.prepare('DELETE FROM project_tasks WHERE id = ?').bind(taskId).run();
 }
@@ -1604,6 +1697,8 @@ export async function getTaskById(
     created_at: first.created_at,
     updated_at: first.updated_at,
     updated_by: first.updated_by,
+    updated_by_prenom: first.updated_by_prenom,
+    updated_by_nom: first.updated_by_nom,
     assigned_count: first.assigned_count,
     skills: []
   };
@@ -1652,6 +1747,9 @@ export async function getTasksByJeune(
       state: row.state as 'todo' | 'in_progress' | 'done' | 'delivered',
       created_at: row.created_at,
       updated_at: row.updated_at,
+      updated_by: null,
+      updated_by_prenom: null,
+      updated_by_nom: null,
       assigned_count: row.assigned_count,
       skills: []
     };

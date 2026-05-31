@@ -2,11 +2,12 @@
   import type { PageData } from './$types';
   import { generateBadgeSvg } from '$lib/utils/badge-svg';
   import { LEVEL_COLORS } from '$lib/utils/level';
+  import type { Level } from '$lib/utils/level';
 
   let { data } = $props<{ data: PageData }>();
 
   const svgContent = generateBadgeSvg(data.domainIcon, data.level);
-  const levelColor = LEVEL_COLORS[data.level];
+  const levelColor = LEVEL_COLORS[data.level as Level];
 
   function downloadSvg() {
     const blob = new Blob([svgContent], { type: 'image/svg+xml' });

@@ -1,6 +1,6 @@
 import { fail, redirect, error } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { getAllTeams, getTeamsByCreator, createTeam, archiveTeam } from '$lib/server/db';
+import { getAllTeams, createTeam, archiveTeam } from '$lib/server/db';
 
 function requireAdminOrAnimateur(locals: App.Locals) {
   const role = locals.session?.user.role;
@@ -17,9 +17,8 @@ export const load: PageServerLoad = async ({ platform, locals, url }) => {
   // Filtre "active" pour n'afficher que les équipes actives
   const onlyActive = url.searchParams.get('active') !== 'false';
 
-  const teams = isAdmin
-    ? await getAllTeams(db, onlyActive)
-    : await getTeamsByCreator(db, user.id, onlyActive);
+  // Tous les animateurs et admins voient toutes les équipes.
+  const teams = await getAllTeams(db, onlyActive);
 
   return { teams, isAdmin, onlyActive };
 };
@@ -51,22 +50,17 @@ export const actions: Actions = {
     requireAdminOrAnimateur(locals);
 
     const db = platform!.env.DB;
-    const user = locals.session!.user;
     const data = await request.formData();
 
     const teamId = (data.get('team_id') as string | null) ?? '';
     const archive = data.get('archive') === 'true';
 
-    // Vérifier que l'utilisateur peut gérer cette équipe
     const team = await db
       .prepare('SELECT created_by FROM teams WHERE id = ?')
       .bind(teamId)
       .first<{ created_by: string }>();
 
     if (!team) return fail(404, { error: 'Équipe non trouvée.' });
-    if (team.created_by !== user.id && user.role !== 'admin') {
-      return fail(403, { error: 'Accès non autorisé.' });
-    }
 
     await archiveTeam(db, teamId, archive);
 

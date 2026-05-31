@@ -22,7 +22,7 @@
 {#each data.domains as domain}
   {@const categories    = data.categoriesByDomain[domain.id] ?? []}
   {@const allSkills     = data.skillsByDomain[domain.id] ?? []}
-  {@const uncategorized = allSkills.filter(s => !s.category_id)}
+  {@const uncategorized = allSkills.filter((s: (typeof allSkills)[number]) => !s.category_id)}
 
   <div class="mb-6 bg-gray-900/50 rounded-xl overflow-hidden">
 
@@ -81,7 +81,7 @@
 
         <!-- Catégories -->
         {#each categories as cat}
-          {@const catSkills = allSkills.filter(s => s.category_id === cat.id)}
+          {@const catSkills = allSkills.filter((s: (typeof allSkills)[number]) => s.category_id === cat.id)}
 
           <div class="bg-gray-800 rounded-xl overflow-hidden">
 

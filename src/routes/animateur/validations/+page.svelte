@@ -138,6 +138,26 @@
                 </div>
               </form>
 
+              <!-- Formulaire à compléter -->
+              <form method="POST" action="?/requestCompletion" class="mb-3">
+                <input type="hidden" name="request_id" value={req.id} />
+                <div class="flex gap-2">
+                  <input
+                    name="comment"
+                    type="text"
+                    placeholder="Ce que le jeune doit compléter (requis)"
+                    required
+                    class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500"
+                  />
+                  <button
+                    type="submit"
+                    class="bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium px-4 py-2 rounded-lg whitespace-nowrap"
+                  >
+                    ✎ À compléter
+                  </button>
+                </div>
+              </form>
+
               <!-- Formulaire refuser -->
               <form method="POST" action="?/reject">
                 <input type="hidden" name="request_id" value={req.id} />

@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { PageData, ActionData } from './$types';
+  import { enhance } from '$app/forms';
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -132,7 +133,7 @@
               Modifier
             </button>
             <button
-              onclick={() => document.getElementById('archiveModal').classList.remove('hidden')}
+              onclick={() => document.getElementById('archiveModal')?.classList.remove('hidden')}
               class="text-xs {data.team.archived ? 'bg-green-600 hover:bg-green-500' : 'bg-gray-600 hover:bg-gray-500'} text-white px-3 py-1.5 rounded-lg transition-colors"
             >
               {#if data.team.archived}
@@ -285,7 +286,7 @@
     </p>
     <div class="flex gap-3 justify-end">
       <button
-        onclick={() => document.getElementById('archiveModal').classList.add('hidden')}
+        onclick={() => document.getElementById('archiveModal')?.classList.add('hidden')}
         class="px-4 py-2 text-sm text-gray-400 hover:text-gray-200 transition-colors"
       >
         Annuler
@@ -294,7 +295,7 @@
         method="POST"
         action="?/archiveTeam"
         use:enhance={() => {
-          document.getElementById('archiveModal').classList.add('hidden');
+          document.getElementById('archiveModal')?.classList.add('hidden');
           return () => {};
         }}
       >

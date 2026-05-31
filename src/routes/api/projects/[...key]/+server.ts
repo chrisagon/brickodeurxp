@@ -9,9 +9,9 @@ export const GET: RequestHandler = async ({ params, platform }) => {
   if (!object) throw error(404, 'Fichier introuvable');
 
   const headers = new Headers();
-  object.writeHttpMetadata(headers);
+  object.writeHttpMetadata(headers as unknown as Parameters<typeof object.writeHttpMetadata>[0]);
   headers.set('etag', object.httpEtag);
   headers.set('cache-control', 'private, max-age=3600');
 
-  return new Response(object.body, { headers });
+  return new Response(object.body as unknown as BodyInit, { headers });
 };

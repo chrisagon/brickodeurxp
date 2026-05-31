@@ -35,7 +35,7 @@
   {#if data.session}
     <nav class="border-b border-gray-800 px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-5">
-        <span class="font-bold text-orange-400">Brickodeurs</span>
+        <a href={roleHome} class="font-bold text-orange-400">BrickodeurXP</a>
         <a href="/leaderboard" class="text-sm text-gray-400 hover:text-orange-400 transition-colors">Classement</a>
       </div>
       <div class="flex items-center gap-4 text-sm">

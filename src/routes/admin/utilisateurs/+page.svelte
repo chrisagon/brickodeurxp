@@ -19,14 +19,14 @@
   };
 
   let filtered = $derived(
-    filterRole === 'all' ? data.users : data.users.filter((u) => u.role === filterRole)
+    filterRole === 'all' ? data.users : data.users.filter((u: (typeof data.users)[number]) => u.role === filterRole)
   );
 
   const counts = $derived({
     all: data.users.length,
-    jeune: data.users.filter((u) => u.role === 'jeune').length,
-    animateur: data.users.filter((u) => u.role === 'animateur').length,
-    parent: data.users.filter((u) => u.role === 'parent').length,
+    jeune: data.users.filter((u: (typeof data.users)[number]) => u.role === 'jeune').length,
+    animateur: data.users.filter((u: (typeof data.users)[number]) => u.role === 'animateur').length,
+    parent: data.users.filter((u: (typeof data.users)[number]) => u.role === 'parent').length,
   });
 </script>
 
@@ -65,7 +65,7 @@
           : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}"
       >
         {label}
-        <span class="ml-1 text-xs opacity-70">{counts[role]}</span>
+        <span class="ml-1 text-xs opacity-70">{counts[role as keyof typeof counts]}</span>
       </button>
     {/each}
   </div>

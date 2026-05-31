@@ -18,6 +18,8 @@ type SkillState = {
   description: string;
   pendingRequest: boolean;
   rejectedRequest: boolean;
+  toCompleteRequest: boolean;
+  toCompleteComment: string | null;
   rejectionComment: string | null;
   reviewerComment: string | null;
   approved: boolean;
@@ -66,6 +68,14 @@ export const load: PageServerLoad = async ({ locals, platform }) => {
       .filter((r) => r.status === 'rejected')
       .map((r) => [r.skill_id, r.reviewer_comment])
   );
+  const toCompleteBySkillId = new Map(
+    requests
+      .filter((r) => r.status === 'to_complete')
+      .map((r) => [r.skill_id, r.reviewer_comment])
+  );
+  const toCompleteSkillIds = new Set(
+    requests.filter((r) => r.status === 'to_complete').map((r) => r.skill_id)
+  );
   const approvedSkillIds = new Set(
     requests.filter((r) => r.status === 'approved').map((r) => r.skill_id)
   );
@@ -86,10 +96,12 @@ export const load: PageServerLoad = async ({ locals, platform }) => {
       const badge = badgeByCategoryId.get(cat.id) ?? null;
 
       const skillStates: SkillState[] = skills.map((s) => {
+        const isToComplete = toCompleteSkillIds.has(s.id) && !approvedSkillIds.has(s.id);
         const isRejected =
           rejectedBySkillId.has(s.id) &&
           !approvedSkillIds.has(s.id) &&
-          !pendingSkillIds.has(s.id);
+          !pendingSkillIds.has(s.id) &&
+          !isToComplete;
         return {
           id: s.id,
           title: s.title,
@@ -97,6 +109,8 @@ export const load: PageServerLoad = async ({ locals, platform }) => {
           approved: approvedSkillIds.has(s.id),
           pendingRequest: pendingSkillIds.has(s.id),
           rejectedRequest: isRejected,
+          toCompleteRequest: isToComplete,
+          toCompleteComment: isToComplete ? (toCompleteBySkillId.get(s.id) ?? null) : null,
           rejectionComment: isRejected ? (rejectedBySkillId.get(s.id) ?? null) : null,
           reviewerComment: approvedSkillIds.has(s.id)
             ? (approvedCommentBySkillId.get(s.id) ?? null)
@@ -120,10 +134,12 @@ export const load: PageServerLoad = async ({ locals, platform }) => {
     // Compétences sans catégorie
     const uncategorized = allSkillsInDomain.filter((s) => !s.category_id);
     const uncategorizedStates: SkillState[] = uncategorized.map((s) => {
+      const isToComplete = toCompleteSkillIds.has(s.id) && !approvedSkillIds.has(s.id);
       const isRejected =
         rejectedBySkillId.has(s.id) &&
         !approvedSkillIds.has(s.id) &&
-        !pendingSkillIds.has(s.id);
+        !pendingSkillIds.has(s.id) &&
+        !isToComplete;
       return {
         id: s.id,
         title: s.title,
@@ -131,6 +147,8 @@ export const load: PageServerLoad = async ({ locals, platform }) => {
         approved: approvedSkillIds.has(s.id),
         pendingRequest: pendingSkillIds.has(s.id),
         rejectedRequest: isRejected,
+        toCompleteRequest: isToComplete,
+        toCompleteComment: isToComplete ? (toCompleteBySkillId.get(s.id) ?? null) : null,
         rejectionComment: isRejected ? (rejectedBySkillId.get(s.id) ?? null) : null,
         reviewerComment: approvedSkillIds.has(s.id)
           ? (approvedCommentBySkillId.get(s.id) ?? null)
