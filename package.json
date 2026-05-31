@@ -30,5 +30,10 @@
 	},
 	"dependencies": {
 		"bcryptjs": "^3.0.3"
+	},
+	"overrides": {
+		"@sveltejs/kit": {
+			"cookie": "^0.7.0"
+		}
 	}
 }
