@@ -1,9 +1,39 @@
 <script lang="ts">
   import type { PageData, ActionData } from './$types';
   import { enhance } from '$app/forms';
+  import { invalidateAll } from '$app/navigation';
+  import { onMount, tick } from 'svelte';
 
   let { data, form } = $props<{ data: PageData; form: ActionData }>();
   let textarea = $state('');
+
+  // Rafraîchissement automatique de la conversation (type chat) :
+  // on relance le load toutes les 10 s tant que l'onglet est visible.
+  onMount(() => {
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') invalidateAll();
+    }, 10000);
+    return () => clearInterval(interval);
+  });
+
+  // Auto-scroll vers le dernier message : on suit le bas du fil seulement si
+  // l'utilisateur s'y trouvait déjà (pour ne pas l'interrompre s'il lit l'historique).
+  let scrollContainer = $state<HTMLDivElement>();
+  let atBottom = $state(true);
+
+  function onScroll() {
+    if (!scrollContainer) return;
+    atBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight < 120;
+  }
+
+  $effect(() => {
+    data.messages.length; // dépendance : se déclenche à chaque nouveau message
+    if (atBottom) {
+      tick().then(() => {
+        if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
+      });
+    }
+  });
 </script>
 
 <div class="max-w-2xl mx-auto flex flex-col h-[calc(100vh-180px)]">
@@ -16,7 +46,7 @@
   </div>
 
   <!-- Fil de messages -->
-  <div class="flex-1 overflow-y-auto space-y-3 mb-4 pr-1">
+  <div bind:this={scrollContainer} onscroll={onScroll} class="flex-1 overflow-y-auto space-y-3 mb-4 pr-1">
     {#if data.messages.length === 0}
       <div class="text-center py-12 text-gray-600 text-sm">
         Aucun message. Commencez la conversation !
