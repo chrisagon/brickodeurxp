@@ -56,7 +56,7 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
 };
 
 export const actions: Actions = {
-  default: async ({ request, params, locals, platform }) => {
+  create: async ({ request, params, locals, platform }) => {
     const formData = await request.formData();
     const file = formData.get('proof') as File | null;
     const jeuneComment = (formData.get('comment') as string | null)?.trim() || null;

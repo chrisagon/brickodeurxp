@@ -88,7 +88,7 @@
 
       <form
         method="POST"
-        action={editing ? '?/update' : undefined}
+        action={editing ? '?/update' : '?/create'}
         enctype="multipart/form-data"
         class="flex flex-col gap-4"
       >
