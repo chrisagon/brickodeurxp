@@ -126,20 +126,21 @@ Sequential SQL files in `migrations/`. Always create a new numbered file; never 
 
 ---
 
-## Deploy Configuration (configured by /setup-deploy)
-- Platform: **Cloudflare Pages**
+## Deploy Configuration
+- Platform: **Cloudflare Pages** (projet `brickodeurxp`, **direct-upload** — PAS d'intégration Git native)
 - Production URL: **https://brickodeurxp.pages.dev**
-- Deploy workflow: **Automatic on push to main branch**
-- Deploy status command: **HTTP health check**
-- Merge method: **squash**
-- Project type: **web app**
-- Post-deploy health check: **Poll https://brickodeurxp.pages.dev until it responds**
+- Account ID: **cb06d1865b468ea4839f4f2b0a9e85b3**
+- Deploy workflow: **GitHub Actions** — `.github/workflows/deploy.yml` build + `wrangler pages deploy` à chaque push sur `main`
+- Bindings (dans `wrangler.toml`) : D1 `DB` = brickodeurxp, R2 `R2` = brickodeurxp-proofs
+- Secrets runtime (à définir côté Cloudflare, pas au build) : `RESEND_API_KEY`
+- Post-deploy health check: **Poll https://brickodeurxp.pages.dev jusqu'à HTTP 200**
 
-### Custom deploy hooks
-- Pre-merge: **Run `npm run build` to verify compilation**
-- Deploy trigger: **Automatic on push to main branch via Cloudflare Pages**
-- Deploy status: **Poll production URL for HTTP 200 response**
-- Health check: **https://brickodeurxp.pages.dev**
+### Déploiement
+- **Automatique** : `git push origin main` → GitHub Actions build + déploie.
+  - Requiert le secret repo **`CLOUDFLARE_API_TOKEN`** (permission *Cloudflare Pages: Edit*).
+- **Manuel (secours)** : `npm run deploy` (build + `wrangler pages deploy`).
+- Sortie du build (adapter-cloudflare) : `.svelte-kit/cloudflare/`.
+- ⚠️ Le projet Pages n'est PAS lié à GitHub côté Cloudflare ; ne pas compter sur un auto-deploy "natif" Cloudflare — c'est le workflow Actions qui déploie.
 
 ---
 

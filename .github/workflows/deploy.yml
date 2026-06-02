@@ -1,0 +1,38 @@
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+# Évite que deux pushs rapprochés déploient en parallèle (le dernier gagne).
+concurrency:
+  group: pages-deploy-main
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Deploy to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          # L'account ID n'est pas un secret ; inscrit en clair pour éviter un 2e secret.
+          CLOUDFLARE_ACCOUNT_ID: cb06d1865b468ea4839f4f2b0a9e85b3
+        run: npx wrangler pages deploy .svelte-kit/cloudflare --project-name=brickodeurxp --branch=main --commit-dirty=true
