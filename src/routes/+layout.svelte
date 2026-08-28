@@ -33,18 +33,18 @@
 
 <div class="min-h-screen bg-gray-950 text-gray-100">
   {#if data.session}
-    <nav class="border-b border-gray-800 px-4 py-3 flex items-center justify-between">
+    <nav class="border-b border-gray-800 px-4 py-2 flex flex-wrap items-center justify-between gap-y-1">
       <div class="flex items-center gap-5">
-        <a href={roleHome} class="font-bold text-orange-400" data-tour="brand">BrickodeurXP</a>
-        <a href="/leaderboard" class="text-sm text-gray-400 hover:text-orange-400 transition-colors" data-tour="leaderboard">Classement</a>
+        <a href={roleHome} class="font-bold text-orange-400 min-h-[44px] flex items-center" data-tour="brand">BrickodeurXP</a>
+        <a href="/leaderboard" class="text-sm text-gray-400 hover:text-orange-400 transition-colors min-h-[44px] flex items-center" data-tour="leaderboard">Classement</a>
       </div>
       <div class="flex items-center gap-4 text-sm">
-        <a href="/profile" class="text-gray-400 hover:text-orange-400 transition-colors" data-tour="profile">Profil</a>
-        <a href={roleHome} class="text-gray-400 hover:text-orange-400 transition-colors">
+        <a href="/profile" class="text-gray-400 hover:text-orange-400 transition-colors min-h-[44px] flex items-center" data-tour="profile">Profil</a>
+        <a href={roleHome} class="text-gray-400 hover:text-orange-400 transition-colors hidden sm:inline min-h-[44px] flex items-center">
           {data.session.user.prenom} {data.session.user.nom}
         </a>
         <form method="POST" action="/auth/logout">
-          <button class="text-gray-500 hover:text-gray-300">Déconnexion</button>
+          <button class="text-gray-500 hover:text-gray-300 min-h-[44px] flex items-center px-2">Déconnexion</button>
         </form>
       </div>
     </nav>

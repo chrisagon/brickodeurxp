@@ -16,14 +16,14 @@
 </script>
 
 <div class="max-w-4xl mx-auto">
-  <nav class="flex flex-wrap items-center gap-4 mb-6 border-b border-gray-800 pb-3">
-    <a href="/jeune/passeport" class={linkClass('/jeune/passeport')} data-tour="jeune-passeport">Mon passeport</a>
-    <a href="/jeune/projets" class={linkClass('/jeune/projets')} data-tour="jeune-projets">Mes projets</a>
-    <a href="/jeune/annuaire" class={linkClass('/jeune/annuaire')} data-tour="jeune-annuaire">Annuaire</a>
-    <a href="/jeune/messages" class="relative {linkClass('/jeune/messages')}" data-tour="jeune-messages">
+  <nav class="flex flex-wrap items-center gap-x-4 gap-y-0.5 mb-6 border-b border-gray-800 pb-1 -mx-1">
+    <a href="/jeune/passeport" class={linkClass('/jeune/passeport') + ' min-h-[44px] flex items-center px-1'} data-tour="jeune-passeport">Mon passeport</a>
+    <a href="/jeune/projets" class={linkClass('/jeune/projets') + ' min-h-[44px] flex items-center px-1'} data-tour="jeune-projets">Mes projets</a>
+    <a href="/jeune/annuaire" class={linkClass('/jeune/annuaire') + ' min-h-[44px] flex items-center px-1'} data-tour="jeune-annuaire">Annuaire</a>
+    <a href="/jeune/messages" class="relative {linkClass('/jeune/messages') + ' min-h-[44px] flex items-center px-1'}" data-tour="jeune-messages">
       Messages
       {#if data.totalUnread > 0}
-        <span class="absolute -top-1.5 -right-3 bg-orange-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+        <span class="absolute -top-1.5 -right-2 bg-orange-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
           {data.totalUnread > 9 ? '9+' : data.totalUnread}
         </span>
       {/if}
