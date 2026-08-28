@@ -1,0 +1,58 @@
+{
+  "date": "2026-08-28",
+  "app": "brickodeurxp",
+  "pagesAudited": [
+    "/ (landing)",
+    "/auth/login",
+    "/jeune/passeport (desktop+mobile+tablet)",
+    "/jeune/demande/skill-brick-3",
+    "/jeune/annuaire",
+    "/jeune/messages",
+    "/leaderboard",
+    "/competences (animateur)",
+    "/animateur/validations (desktop+mobile)"
+  ],
+  "scores": {
+    "typography": "C+",
+    "color": "B",
+    "layoutAlignment": "B",
+    "componentConsistency": "B",
+    "responsive": "B",
+    "accessibility": "B-",
+    "interactionFeedback": "B-",
+    "emptyStates": "B+",
+    "visualHierarchy": "B-",
+    "identityAiSlop": "C+"
+  },
+  "overall": "B-",
+  "aiSlopScore": 3.0,
+  "fixCommits": [
+    "d09e4f0 style(design): F-001/F-002 — nav top responsive (wrap + prénom masqué mobile) et navs touch-friendly 44px",
+    "bdbe92a style(design): F-002 — touch targets ≥44px sur boutons d'action forme et guides",
+    "f8fbaff style(design): F-003 — composant ProofImage avec placeholder thémé pour image cassée",
+    "db4b227 style(design): F-004 — popover d'onboarding driver.js thémé (sombre, accent orange)",
+    "c3fde89 style(design): F-006/F-008 — hiérarchie boutons validation (primaire solide, secondaires translucides) + microcopy section compétences sans catégorie"
+  ],
+  "findings": [
+    { "id": "F-001", "severity": "high", "title": "Nav top non responsive (<768px), pas de hamburger", "areas": ["src/routes/*/+layout.svelte"], "status": "fixed", "fix": "flex-wrap + prénom-nom hidden sm:inline + re-test mobile 360px OK (3 layouts)" },
+    { "id": "F-002", "severity": "high", "title": "Touch targets < 44px systématiques", "status": "fixed", "fix": "min-h-[44px]/[40px] sur navs, boutons validation, pastilles passeport, bouton submit demande, ? Guide" },
+    { "id": "F-003", "severity": "high", "title": "Images preuve cassées (api 500) + pas de fallback visuel img", "status": "fixed", "fix": "composant ProofImage.svelte (placeholder thémé onerror, reset sur changement de src) ; note : erreur 500 R2 = bug env dev, redémarrer npm run dev" },
+    { "id": "F-004", "severity": "medium", "title": "Popover driver.js blanc brut sur UI sombre", "status": "fixed", "fix": "overrides CSS globaux app.css (fond gray-800, titre orange, boutons orange/outline)" },
+    { "id": "F-005", "severity": "medium", "title": "Fonte générique system-ui/Helvetica", "status": "open", "note": "exclu — décision de marque (choix de fonte à définir)" },
+    { "id": "F-006", "severity": "medium", "title": "Bruit de boutons orange (9x Soumettre) + pas de gradation Valider/Refuser", "status": "fixed", "fix": "Valider = primaire solide vert ; À compléter/Refuser = translucides bg-*/15 texte coloré ; pastilles passeport déjà sobres 44px" },
+    { "id": "F-007", "severity": "medium", "title": "Trous de données : domaines 0 compétences, doublon Engrenages", "status": "open", "note": "exclu — données de seed/DB, pas du design" },
+    { "id": "F-008", "severity": "medium", "title": "Microcopy ambiguë « Compétences en cours de catégorisation »", "status": "fixed", "fix": "→ « Autres compétences de ce domaine » (passeport)" },
+    { "id": "F-009", "severity": "low", "title": "Emojis comme icônes", "status": "open", "note": "backlog — remplacement par icon set cohérent" },
+    { "id": "F-010", "severity": "low", "title": "« ? Guide » ambigu + trop petit", "status": "fixed", "fix": "taille 44px (Onboarding.svelte) ; libellé conservé" },
+    { "id": "F-011", "severity": "low", "title": "Pas de retour app évident depuis pages publiques", "status": "open", "note": "backlog" },
+    { "id": "F-012", "severity": "low", "title": "Focus visibles rares", "status": "open", "note": "backlog — outline focus-token global recommandé" }
+  ],
+  "strengths": [
+    "Empty states actionnables cohérents",
+    "Palette unifiée navy + orange + pastilles domaine",
+    "Accordéons avec compteurs",
+    "Barres de progression passeport",
+    "Zéro gradient/skeleton/jargon gratuits",
+    "Onboarding double tour (jeune + animateur) thémé"
+  ]
+}
