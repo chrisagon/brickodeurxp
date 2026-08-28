@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { PageData, ActionData } from './$types';
+  import ProofImage from '$lib/components/ProofImage.svelte';
   let { data, form } = $props<{ data: PageData; form: ActionData }>();
 
   const editing = $derived(!!data.editableRequest);
@@ -123,7 +124,7 @@
                   <track kind="captions" src="" label="Sous-titres" />
                 </video>
               {:else}
-                <img src={existingProofUrl} alt="Preuve actuelle" class="w-full max-h-48 object-contain" />
+                <ProofImage src={existingProofUrl} alt="Preuve actuelle" class="max-h-48 object-contain" />
               {/if}
             </div>
             <p class="text-xs text-gray-500 mb-2">Preuve actuelle. Choisis un fichier pour la remplacer.</p>
@@ -157,7 +158,7 @@
                 <track kind="captions" src="" label="Sous-titres" />
               </video>
             {:else}
-              <img src={previewUrl} alt="Aperçu" class="w-full max-h-48 object-contain" />
+              <ProofImage src={previewUrl} alt="Aperçu" class="max-h-48 object-contain" />
             {/if}
           </div>
         {/if}
@@ -209,7 +210,7 @@
 
         {#if projectPreviewUrl}
           <div class="rounded-lg overflow-hidden bg-gray-800 max-h-32">
-            <img src={projectPreviewUrl} alt="Aperçu projet" class="w-full max-h-32 object-contain" />
+            <ProofImage src={projectPreviewUrl} alt="Aperçu projet" class="max-h-32 object-contain" />
           </div>
         {/if}
 

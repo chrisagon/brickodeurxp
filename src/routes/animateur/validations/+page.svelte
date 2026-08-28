@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { PageData, ActionData } from './$types';
+  import ProofImage from '$lib/components/ProofImage.svelte';
   let { data, form } = $props<{ data: PageData; form: ActionData }>();
 
   let expandedId = $state<string | null>(null);
@@ -87,10 +88,10 @@
                     <track kind="captions" src="" label="Sous-titres" />
                   </video>
                 {:else}
-                  <img
+                  <ProofImage
                     src="/api/proofs/{req.proof_url.replace('proofs/', '')}"
                     alt="Preuve de {req.jeune_prenom} {req.jeune_nom}"
-                    class="w-full max-h-64 object-contain"
+                    class="max-h-64 object-contain"
                   />
                 {/if}
               </div>
@@ -101,10 +102,10 @@
                   <p class="text-xs text-gray-500 mb-2">Fichier projet :</p>
                   {#if req.project_type?.startsWith('image/')}
                     <div class="bg-gray-800 rounded-lg overflow-hidden">
-                      <img
+                      <ProofImage
                         src="/api/projects/{req.project_url.replace('projects/', '')}"
                         alt="Projet de {req.jeune_prenom}"
-                        class="w-full max-h-48 object-contain"
+                        class="max-h-48 object-contain"
                       />
                     </div>
                   {:else}
