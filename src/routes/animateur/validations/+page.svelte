@@ -152,7 +152,7 @@
                   />
                   <button
                     type="submit"
-                    class="bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium px-4 py-2.5 min-h-[44px] rounded-lg whitespace-nowrap"
+                    class="bg-amber-500/15 hover:bg-amber-500/30 text-amber-400 text-sm font-medium px-4 py-2.5 min-h-[44px] rounded-lg whitespace-nowrap"
                   >
                     ✎ À compléter
                   </button>
@@ -172,7 +172,7 @@
                   />
                   <button
                     type="submit"
-                    class="bg-red-700 hover:bg-red-600 text-white text-sm font-medium px-4 py-2.5 min-h-[44px] rounded-lg whitespace-nowrap"
+                    class="bg-red-500/15 hover:bg-red-500/30 text-red-400 text-sm font-medium px-4 py-2.5 min-h-[44px] rounded-lg whitespace-nowrap"
                   >
                     ✗ Refuser
                   </button>

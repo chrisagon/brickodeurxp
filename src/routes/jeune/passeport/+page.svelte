@@ -148,7 +148,7 @@
         {#if dp.uncategorizedSkills.length > 0}
           <div class="bg-gray-800/30 rounded-xl overflow-hidden border border-dashed border-gray-700/50">
             <div class="px-4 py-2 border-b border-gray-700/30">
-              <p class="text-xs text-gray-600">Compétences en cours de catégorisation</p>
+              <p class="text-xs text-gray-600">Autres compétences de ce domaine</p>
             </div>
             <div class="space-y-1 p-2">
               {#each dp.uncategorizedSkills as skill}
