@@ -215,7 +215,7 @@
 
         <button
           type="submit"
-          class="bg-orange-500 hover:bg-orange-400 text-white font-semibold py-2.5 rounded-lg transition-colors"
+          class="bg-orange-500 hover:bg-orange-400 text-white font-semibold py-2.5 min-h-[44px] rounded-lg transition-colors"
         >
           {editing ? 'Enregistrer les modifications' : 'Envoyer ma preuve'}
         </button>

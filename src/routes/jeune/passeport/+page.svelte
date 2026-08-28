@@ -107,7 +107,7 @@
                   {#if !skill.approved && !skill.pendingRequest && !skill.rejectedRequest && !skill.toCompleteRequest}
                     <a
                       href="/jeune/demande/{skill.id}"
-                      class="text-xs bg-orange-500/20 hover:bg-orange-500/40 text-orange-400 px-3 py-1 rounded-lg transition-colors whitespace-nowrap ml-2"
+                      class="text-xs bg-orange-500/20 hover:bg-orange-500/40 text-orange-400 px-3.5 py-2 min-h-[40px] inline-flex items-center rounded-lg transition-colors whitespace-nowrap ml-2"
                       data-tour="jeune-submit"
                     >
                       Soumettre
@@ -115,21 +115,21 @@
                   {:else if skill.pendingRequest}
                     <a
                       href="/jeune/demande/{skill.id}"
-                      class="text-xs bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 px-3 py-1 rounded-lg transition-colors whitespace-nowrap ml-2"
+                      class="text-xs bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 px-3.5 py-2 min-h-[40px] inline-flex items-center rounded-lg transition-colors whitespace-nowrap ml-2"
                     >
                       Modifier
                     </a>
                   {:else if skill.toCompleteRequest}
                     <a
                       href="/jeune/demande/{skill.id}"
-                      class="text-xs bg-amber-500/20 hover:bg-amber-500/40 text-amber-400 px-3 py-1 rounded-lg transition-colors whitespace-nowrap ml-2"
+                      class="text-xs bg-amber-500/20 hover:bg-amber-500/40 text-amber-400 px-3.5 py-2 min-h-[40px] inline-flex items-center rounded-lg transition-colors whitespace-nowrap ml-2"
                     >
                       Compléter
                     </a>
                   {:else if skill.rejectedRequest}
                     <a
                       href="/jeune/demande/{skill.id}"
-                      class="text-xs bg-red-500/20 hover:bg-red-500/30 text-red-400 px-3 py-1 rounded-lg transition-colors whitespace-nowrap ml-2"
+                      class="text-xs bg-red-500/20 hover:bg-red-500/30 text-red-400 px-3.5 py-2 min-h-[40px] inline-flex items-center rounded-lg transition-colors whitespace-nowrap ml-2"
                     >
                       Renvoyer
                     </a>
@@ -173,7 +173,7 @@
                   {#if !skill.approved && !skill.pendingRequest && !skill.rejectedRequest && !skill.toCompleteRequest}
                     <a
                       href="/jeune/demande/{skill.id}"
-                      class="text-xs bg-orange-500/20 hover:bg-orange-500/40 text-orange-400 px-3 py-1 rounded-lg transition-colors whitespace-nowrap ml-2"
+                      class="text-xs bg-orange-500/20 hover:bg-orange-500/40 text-orange-400 px-3.5 py-2 min-h-[40px] inline-flex items-center rounded-lg transition-colors whitespace-nowrap ml-2"
                       data-tour="jeune-submit"
                     >
                       Soumettre
@@ -181,21 +181,21 @@
                   {:else if skill.pendingRequest}
                     <a
                       href="/jeune/demande/{skill.id}"
-                      class="text-xs bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 px-3 py-1 rounded-lg transition-colors whitespace-nowrap ml-2"
+                      class="text-xs bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 px-3.5 py-2 min-h-[40px] inline-flex items-center rounded-lg transition-colors whitespace-nowrap ml-2"
                     >
                       Modifier
                     </a>
                   {:else if skill.toCompleteRequest}
                     <a
                       href="/jeune/demande/{skill.id}"
-                      class="text-xs bg-amber-500/20 hover:bg-amber-500/40 text-amber-400 px-3 py-1 rounded-lg transition-colors whitespace-nowrap ml-2"
+                      class="text-xs bg-amber-500/20 hover:bg-amber-500/40 text-amber-400 px-3.5 py-2 min-h-[40px] inline-flex items-center rounded-lg transition-colors whitespace-nowrap ml-2"
                     >
                       Compléter
                     </a>
                   {:else if skill.rejectedRequest}
                     <a
                       href="/jeune/demande/{skill.id}"
-                      class="text-xs bg-red-500/20 hover:bg-red-500/30 text-red-400 px-3 py-1 rounded-lg transition-colors whitespace-nowrap ml-2"
+                      class="text-xs bg-red-500/20 hover:bg-red-500/30 text-red-400 px-3.5 py-2 min-h-[40px] inline-flex items-center rounded-lg transition-colors whitespace-nowrap ml-2"
                     >
                       Renvoyer
                     </a>

@@ -21,7 +21,7 @@
 <button
   type="button"
   onclick={() => replayTour(role)}
-  class="text-xs text-gray-400 hover:text-orange-400 transition-colors ml-2"
+  class="text-xs text-gray-400 hover:text-orange-400 transition-colors ml-2 min-h-[44px] flex items-center px-2"
   title="Revoir le guide"
   aria-label="Revoir le guide d'onboarding"
 >
