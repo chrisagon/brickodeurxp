@@ -30,7 +30,8 @@
 		"vitest": "^4.1.0"
 	},
 	"dependencies": {
-		"bcryptjs": "^3.0.3"
+		"bcryptjs": "^3.0.3",
+		"driver.js": "^1.8.0"
 	},
 	"overrides": {
 		"@sveltejs/kit": {

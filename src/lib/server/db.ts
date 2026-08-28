@@ -1049,6 +1049,21 @@ export async function getDirectoryUsers(
   return result.results;
 }
 
+/** Map jeune_id -> liste des équipes (id + nom) pour l'annuaire. */
+export async function getDirectoryTeamMemberships(
+  db: D1Database
+): Promise<{ jeune_id: string; team_id: string; team_name: string }[]> {
+  const result = await db
+    .prepare(
+      `SELECT tm.jeune_id, t.id AS team_id, t.name AS team_name
+       FROM team_members tm
+       JOIN teams t ON t.id = tm.team_id
+       ORDER BY t.name`
+    )
+    .all<{ jeune_id: string; team_id: string; team_name: string }>();
+  return result.results;
+}
+
 // ── Teams ─────────────────────────────────────────────────────────────────────
 
 export type Team = {

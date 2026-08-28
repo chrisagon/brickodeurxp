@@ -35,11 +35,11 @@
   {#if data.session}
     <nav class="border-b border-gray-800 px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-5">
-        <a href={roleHome} class="font-bold text-orange-400">BrickodeurXP</a>
-        <a href="/leaderboard" class="text-sm text-gray-400 hover:text-orange-400 transition-colors">Classement</a>
+        <a href={roleHome} class="font-bold text-orange-400" data-tour="brand">BrickodeurXP</a>
+        <a href="/leaderboard" class="text-sm text-gray-400 hover:text-orange-400 transition-colors" data-tour="leaderboard">Classement</a>
       </div>
       <div class="flex items-center gap-4 text-sm">
-        <a href="/profile" class="text-gray-400 hover:text-orange-400 transition-colors">Profil</a>
+        <a href="/profile" class="text-gray-400 hover:text-orange-400 transition-colors" data-tour="profile">Profil</a>
         <a href={roleHome} class="text-gray-400 hover:text-orange-400 transition-colors">
           {data.session.user.prenom} {data.session.user.nom}
         </a>

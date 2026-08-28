@@ -6,7 +6,7 @@
 </script>
 
 <div class="max-w-3xl mx-auto">
-  <h1 class="text-xl font-bold text-orange-400 mb-6">
+  <h1 class="text-xl font-bold text-orange-400 mb-6" data-tour="anim-validations-title">
     Demandes à valider
     {#if data.requests.length > 0}
       <span class="ml-2 text-sm bg-orange-500 text-white rounded-full px-2 py-0.5">

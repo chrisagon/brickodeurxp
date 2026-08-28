@@ -25,3 +25,7 @@ vite.config.ts.timestamp-*
 # Claude Code
 .claude/settings.local.json
 .dev.vars
+
+# Local npm cache (used to work around sandbox EPERM on default cache)
+.npm-cache
+.design-preview/

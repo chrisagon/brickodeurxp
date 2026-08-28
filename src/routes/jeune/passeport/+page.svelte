@@ -4,7 +4,7 @@
 </script>
 
 <div class="max-w-2xl mx-auto">
-  <h1 class="text-2xl font-bold text-orange-400 mb-2">Mon Passeport Brickodeurs</h1>
+  <h1 class="text-2xl font-bold text-orange-400 mb-2" data-tour="passeport-title">Mon Passeport Brickodeurs</h1>
   <p class="text-sm text-gray-400 mb-8">
     Choisis les compétences cibles que tu veux valider dans ton passeport des Brickodeurs. Un animateur les validera ensuite.
   </p>
@@ -108,6 +108,7 @@
                     <a
                       href="/jeune/demande/{skill.id}"
                       class="text-xs bg-orange-500/20 hover:bg-orange-500/40 text-orange-400 px-3 py-1 rounded-lg transition-colors whitespace-nowrap ml-2"
+                      data-tour="jeune-submit"
                     >
                       Soumettre
                     </a>
@@ -173,6 +174,7 @@
                     <a
                       href="/jeune/demande/{skill.id}"
                       class="text-xs bg-orange-500/20 hover:bg-orange-500/40 text-orange-400 px-3 py-1 rounded-lg transition-colors whitespace-nowrap ml-2"
+                      data-tour="jeune-submit"
                     >
                       Soumettre
                     </a>
