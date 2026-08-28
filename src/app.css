@@ -1,1 +1,43 @@
 @import "tailwindcss";
+
+/* Onboarding (driver.js) : popover thémé pour coller à l'UI sombre.
+   driver.js pose un popover blanc par défaut (bg/text/bordures/boutons). */
+.driver-popover {
+  background-color: #1e293b !important; /* gray-800 */
+  color: #f3f4f6 !important; /* gray-100 */
+  border: 1px solid #374151 !important; /* gray-700 */
+  border-radius: 0.75rem !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
+}
+
+.driver-popover-title {
+  color: #fb923c !important; /* orange-400 */
+  font-weight: 700 !important;
+}
+
+.driver-popover-description {
+  color: #d1d5db !important; /* gray-300 */
+}
+
+.driver-popover-progress-text {
+  color: #9ca3af !important; /* gray-400 */
+}
+
+.driver-popover-close-btn {
+  color: #9ca3af !important;
+  background: transparent !important;
+}
+
+.driver-popover-navigation-btns button {
+  background-color: #f97316 !important; /* orange-500 */
+  color: #ffffff !important;
+  text-shadow: none !important;
+  border: none !important;
+  border-radius: 0.5rem !important;
+}
+
+.driver-popover-navigation-btns button:last-child {
+  background-color: transparent !important;
+  color: #9ca3af !important;
+  border: 1px solid #4b5563 !important; /* gray-600 */
+}
