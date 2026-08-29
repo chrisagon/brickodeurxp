@@ -1,211 +1,160 @@
 <script lang="ts">
   import type { PageData } from './$types';
+  import { LEVEL_LABELS, type Level } from '$lib/utils/level';
+  import RangNiveau from '$lib/components/RangNiveau.svelte';
+  import LigneCompetence from '$lib/components/LigneCompetence.svelte';
+
   let { data } = $props<{ data: PageData }>();
+
+  /**
+   * Dernier badge obtenu. Approximation : le serveur n'expose pas
+   * `badges.awarded_at`, on prend le premier trouvé. Les badges sont déjà
+   * chargés par le `Promise.all` du load, aucune requête supplémentaire.
+   */
+  const lastBadge = $derived.by(() => {
+    for (const dp of data.passeport) {
+      for (const cp of dp.categories) {
+        if (cp.hasBadge && cp.badgeLevel) {
+          return { cat: cp.category.name, dom: dp.domain.name, level: cp.badgeLevel as Level };
+        }
+      }
+    }
+    return null;
+  });
 </script>
 
-<div class="max-w-2xl mx-auto">
-  <h1 class="text-2xl font-bold text-orange-400 mb-2" data-tour="passeport-title">Mon Passeport Brickodeurs</h1>
-  <p class="text-sm text-gray-400 mb-8">
-    Choisis les compétences cibles que tu veux valider dans ton passeport des Brickodeurs. Un animateur les validera ensuite.
-  </p>
+<div class="nh">
+  <p class="page-title" data-tour="passeport-title">Mon passeport</p>
+
+  {#if lastBadge}
+    <div class="last">
+      <RangNiveau level={lastBadge.level} size={48} />
+      <div>
+        <p class="last-lab">Dernier badge</p>
+        <p class="last-name">{lastBadge.cat} · {lastBadge.dom}</p>
+      </div>
+    </div>
+  {/if}
 
   {#each data.passeport as dp}
-    <div class="mb-8 bg-gray-900 rounded-xl p-5">
-      <!-- En-tête domaine -->
-      <div class="flex items-center justify-between mb-4">
-        <div class="flex items-center gap-3">
-          <span class="w-4 h-4 rounded-full" style="background:{dp.domain.color}"></span>
-          <h2 class="text-lg font-bold">{dp.domain.name}</h2>
-        </div>
-        <div class="flex items-center gap-2">
-          {#if dp.levelImage}
-            <img src={dp.levelImage} alt={dp.level ?? ''} class="w-9 h-9 object-contain drop-shadow" />
+    {@const validees = dp.categories.reduce((n: number, c: any) => n + c.completedCount, 0)}
+    <section class="domain" style="--accent:{dp.accent}" aria-labelledby="dom-{dp.domain.id}">
+      <div class="dhead">
+        <RangNiveau level={dp.level} />
+        <div class="dtitles">
+          <h2 class="dname" id="dom-{dp.domain.id}">{dp.domain.name}</h2>
+          {#if dp.level}
+            <p class="rank">Niveau {LEVEL_LABELS[dp.level as Level]}</p>
+          {:else if validees > 0}
+            <!-- Sans rang, l'ancrage visuel dit ce qui est ACQUIS. « Pas encore
+                 de rang » en 28px annoncerait un manque au premier plan. -->
+            <p class="rank rank-soft">{validees} compétence{validees > 1 ? 's' : ''} validée{validees > 1 ? 's' : ''}</p>
+          {:else}
+            <p class="rank rank-soft">Ton premier badge t'attend</p>
           {/if}
-          <span class="text-xs text-gray-500">{dp.categoryBadgeCount}/{dp.categories.length} badge{dp.categories.length !== 1 ? 's' : ''}</span>
         </div>
       </div>
 
-      <!-- Barre de progression -->
       {#if dp.categories.length > 0}
-        <div class="w-full bg-gray-800 rounded-full h-2 mb-5">
-          <div
-            class="h-2 rounded-full transition-all"
-            style="width:{Math.min(dp.categoryBadgeCount / Math.max(dp.categories.length, 1) * 100, 100)}%; background:{dp.domain.color}"
-          ></div>
+        <div class="bar" aria-hidden="true">
+          {#each dp.categories as _, i}
+            <i class={i < dp.categoryBadgeCount ? 'on' : ''}></i>
+          {/each}
         </div>
+        <p class="count">{dp.categoryBadgeCount} sur {dp.categories.length} badge{dp.categories.length !== 1 ? 's' : ''}</p>
       {/if}
 
-      <!-- Catégories -->
-      <div class="space-y-4">
-        {#each dp.categories as cp}
-          <div class="bg-gray-800/60 rounded-xl overflow-hidden">
-            <!-- En-tête catégorie -->
-            <div class="flex items-center justify-between px-4 py-3 border-b border-gray-700/50">
-              <div class="flex items-center gap-2">
-                {#if cp.hasBadge && cp.badgeImage}
-                  <img src={cp.badgeImage} alt={cp.badgeLevel ?? 'badge'} class="w-7 h-7 object-contain drop-shadow flex-shrink-0" />
-                {:else}
-                  <span class="w-7 h-7 rounded-full border-2 border-dashed border-gray-600 flex items-center justify-center flex-shrink-0">
-                    <span class="text-gray-600 text-xs">{cp.completedCount}/{cp.totalCount}</span>
-                  </span>
-                {/if}
-                <div>
-                  <p class="font-semibold text-sm {cp.hasBadge ? 'text-orange-300' : 'text-gray-300'}">{cp.category.name}</p>
-                  {#if cp.hasBadge}
-                    <p class="text-xs text-orange-400/70">Badge {cp.badgeLevel} obtenu !</p>
-                  {:else}
-                    <p class="text-xs text-gray-500">{cp.completedCount}/{cp.totalCount} compétence{cp.totalCount !== 1 ? 's' : ''} validée{cp.completedCount !== 1 ? 's' : ''}</p>
-                  {/if}
-                </div>
-              </div>
-              <!-- Mini barre catégorie -->
-              {#if !cp.hasBadge && cp.totalCount > 0}
-                <div class="w-20 bg-gray-700 rounded-full h-1.5 ml-2 flex-shrink-0">
-                  <div
-                    class="h-1.5 rounded-full bg-orange-500/60 transition-all"
-                    style="width:{Math.min(cp.completedCount / cp.totalCount * 100, 100)}%"
-                  ></div>
-                </div>
-              {/if}
-            </div>
+      {#each dp.categories as cp}
+        <div class="cat">
+          {#if cp.hasBadge && cp.badgeLevel}
+            <RangNiveau level={cp.badgeLevel as Level} size={26} />
+          {:else}
+            <span class="cbadge" aria-hidden="true">{cp.completedCount}/{cp.totalCount}</span>
+          {/if}
+          <span class="cname">{cp.category.name}</span>
+          <span class="cstate" class:done={cp.hasBadge}>
+            {#if cp.hasBadge && cp.badgeLevel}
+              Badge {LEVEL_LABELS[cp.badgeLevel as Level]}
+            {:else}
+              {cp.completedCount} sur {cp.totalCount}
+            {/if}
+          </span>
+        </div>
 
-            <!-- Compétences de la catégorie -->
-            <div class="space-y-1 p-2">
-              {#each cp.skills as skill}
-                <div class="flex items-center justify-between px-3 py-2 rounded-lg
-                  {skill.approved ? 'bg-gray-700/30' : skill.rejectedRequest ? 'bg-red-900/10' : skill.toCompleteRequest ? 'bg-amber-900/10' : 'bg-transparent'}">
-                  <div class="flex items-center gap-2 flex-1 min-w-0">
-                    {#if skill.approved}
-                      <span class="text-green-400 text-sm w-5 text-center flex-shrink-0">✓</span>
-                    {:else if skill.pendingRequest}
-                      <span class="text-yellow-400 text-sm w-5 text-center flex-shrink-0">⏳</span>
-                    {:else if skill.toCompleteRequest}
-                      <span class="text-amber-400 text-sm w-5 text-center flex-shrink-0">✎</span>
-                    {:else if skill.rejectedRequest}
-                      <span class="text-red-400 text-sm w-5 text-center flex-shrink-0">✗</span>
-                    {:else}
-                      <span class="text-gray-600 text-sm w-5 text-center flex-shrink-0">○</span>
-                    {/if}
-                    <div class="min-w-0">
-                      <p class="text-sm {skill.approved ? 'text-gray-200' : skill.rejectedRequest ? 'text-red-300' : 'text-gray-400'}">
-                        {skill.title}
-                      </p>
-                      {#if skill.description}
-                        <p class="text-xs text-gray-600">{skill.description}</p>
-                      {/if}
-                      {#if skill.approved && skill.reviewerComment}
-                        <p class="text-xs text-gray-500 italic mt-0.5">💬 {skill.reviewerComment}</p>
-                      {/if}
-                      {#if skill.rejectedRequest && skill.rejectionComment}
-                        <p class="text-xs text-red-400/70 mt-0.5">Refusé : {skill.rejectionComment}</p>
-                      {/if}
-                      {#if skill.toCompleteRequest && skill.toCompleteComment}
-                        <p class="text-xs text-amber-400/80 mt-0.5">À compléter : {skill.toCompleteComment}</p>
-                      {/if}
-                    </div>
-                  </div>
-                  {#if !skill.approved && !skill.pendingRequest && !skill.rejectedRequest && !skill.toCompleteRequest}
-                    <a
-                      href="/jeune/demande/{skill.id}"
-                      class="text-xs bg-orange-500/20 hover:bg-orange-500/40 text-orange-400 px-3.5 py-2 min-h-[40px] inline-flex items-center rounded-lg transition-colors whitespace-nowrap ml-2"
-                      data-tour="jeune-submit"
-                    >
-                      Soumettre
-                    </a>
-                  {:else if skill.pendingRequest}
-                    <a
-                      href="/jeune/demande/{skill.id}"
-                      class="text-xs bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 px-3.5 py-2 min-h-[40px] inline-flex items-center rounded-lg transition-colors whitespace-nowrap ml-2"
-                    >
-                      Modifier
-                    </a>
-                  {:else if skill.toCompleteRequest}
-                    <a
-                      href="/jeune/demande/{skill.id}"
-                      class="text-xs bg-amber-500/20 hover:bg-amber-500/40 text-amber-400 px-3.5 py-2 min-h-[40px] inline-flex items-center rounded-lg transition-colors whitespace-nowrap ml-2"
-                    >
-                      Compléter
-                    </a>
-                  {:else if skill.rejectedRequest}
-                    <a
-                      href="/jeune/demande/{skill.id}"
-                      class="text-xs bg-red-500/20 hover:bg-red-500/30 text-red-400 px-3.5 py-2 min-h-[40px] inline-flex items-center rounded-lg transition-colors whitespace-nowrap ml-2"
-                    >
-                      Renvoyer
-                    </a>
-                  {/if}
-                </div>
-              {:else}
-                <p class="text-sm text-gray-600 text-center py-2">Aucune compétence dans cette catégorie.</p>
-              {/each}
-            </div>
-          </div>
+        {#each cp.skills as skill, i}
+          <LigneCompetence {skill} dataTour={i === 0 ? 'jeune-submit' : undefined} />
         {:else}
-          <p class="text-sm text-gray-600 text-center py-2">Aucune catégorie dans ce domaine.</p>
+          <p class="empty-sm">Rien à valider ici pour l'instant.</p>
         {/each}
+      {:else}
+        <p class="empty-sm">Rien à valider dans ce domaine pour l'instant.</p>
+      {/each}
 
-        <!-- Compétences sans catégorie -->
-        {#if dp.uncategorizedSkills.length > 0}
-          <div class="bg-gray-800/30 rounded-xl overflow-hidden border border-dashed border-gray-700/50">
-            <div class="px-4 py-2 border-b border-gray-700/30">
-              <p class="text-xs text-gray-600">Autres compétences de ce domaine</p>
-            </div>
-            <div class="space-y-1 p-2">
-              {#each dp.uncategorizedSkills as skill}
-                <div class="flex items-center justify-between px-3 py-2 rounded-lg
-                  {skill.approved ? 'bg-gray-700/30' : skill.rejectedRequest ? 'bg-red-900/10' : skill.toCompleteRequest ? 'bg-amber-900/10' : 'bg-transparent'}">
-                  <div class="flex items-center gap-2 flex-1 min-w-0">
-                    {#if skill.approved}
-                      <span class="text-green-400 text-sm w-5 text-center flex-shrink-0">✓</span>
-                    {:else if skill.pendingRequest}
-                      <span class="text-yellow-400 text-sm w-5 text-center flex-shrink-0">⏳</span>
-                    {:else if skill.toCompleteRequest}
-                      <span class="text-amber-400 text-sm w-5 text-center flex-shrink-0">✎</span>
-                    {:else if skill.rejectedRequest}
-                      <span class="text-red-400 text-sm w-5 text-center flex-shrink-0">✗</span>
-                    {:else}
-                      <span class="text-gray-600 text-sm w-5 text-center flex-shrink-0">○</span>
-                    {/if}
-                    <p class="text-sm {skill.approved ? 'text-gray-200' : skill.rejectedRequest ? 'text-red-300' : 'text-gray-400'}">
-                      {skill.title}
-                    </p>
-                  </div>
-                  {#if !skill.approved && !skill.pendingRequest && !skill.rejectedRequest && !skill.toCompleteRequest}
-                    <a
-                      href="/jeune/demande/{skill.id}"
-                      class="text-xs bg-orange-500/20 hover:bg-orange-500/40 text-orange-400 px-3.5 py-2 min-h-[40px] inline-flex items-center rounded-lg transition-colors whitespace-nowrap ml-2"
-                      data-tour="jeune-submit"
-                    >
-                      Soumettre
-                    </a>
-                  {:else if skill.pendingRequest}
-                    <a
-                      href="/jeune/demande/{skill.id}"
-                      class="text-xs bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 px-3.5 py-2 min-h-[40px] inline-flex items-center rounded-lg transition-colors whitespace-nowrap ml-2"
-                    >
-                      Modifier
-                    </a>
-                  {:else if skill.toCompleteRequest}
-                    <a
-                      href="/jeune/demande/{skill.id}"
-                      class="text-xs bg-amber-500/20 hover:bg-amber-500/40 text-amber-400 px-3.5 py-2 min-h-[40px] inline-flex items-center rounded-lg transition-colors whitespace-nowrap ml-2"
-                    >
-                      Compléter
-                    </a>
-                  {:else if skill.rejectedRequest}
-                    <a
-                      href="/jeune/demande/{skill.id}"
-                      class="text-xs bg-red-500/20 hover:bg-red-500/30 text-red-400 px-3.5 py-2 min-h-[40px] inline-flex items-center rounded-lg transition-colors whitespace-nowrap ml-2"
-                    >
-                      Renvoyer
-                    </a>
-                  {/if}
-                </div>
-              {/each}
-            </div>
-          </div>
-        {/if}
-      </div>
+      {#if dp.uncategorizedSkills.length > 0}
+        <div class="cat cat-other"><span class="cname">Autres compétences de ce domaine</span></div>
+        {#each dp.uncategorizedSkills as skill, i}
+          <LigneCompetence {skill} dataTour={dp.categories.length === 0 && i === 0 ? 'jeune-submit' : undefined} />
+        {/each}
+      {/if}
+    </section>
+  {:else}
+    <div class="empty">
+      <p class="empty-title">Ton passeport est encore vierge.</p>
+      <p class="empty-body">Les compétences arrivent bientôt. En attendant, va voir tout ce qu'il y a à débloquer.</p>
+      <a href="/competences" class="empty-cta">Voir les compétences →</a>
     </div>
   {/each}
 </div>
+
+<style>
+  .nh { max-width: 390px; margin: 0 auto; padding-bottom: var(--nh-s5); }
+
+  /* Titre déclassé : le jeune vient de cliquer sur « Mon passeport ». */
+  .page-title {
+    font-size: 14px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--nh-ink-dim); margin-bottom: var(--nh-s4);
+  }
+
+  .last { display: flex; align-items: center; gap: var(--nh-s2); margin-bottom: var(--nh-s5); }
+  .last-lab { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--nh-ink-dim); }
+  .last-name { font-size: 16px; font-weight: 700; color: var(--nh-warn); }
+
+  /* Aucune bordure, aucun fond de bloc : c'est --nh-s5 qui sépare. */
+  .domain { margin-bottom: var(--nh-s5); }
+  .dhead { display: flex; align-items: center; gap: var(--nh-s2); }
+  .dtitles { min-width: 0; }
+  .dname { font-size: 18px; font-weight: 700; letter-spacing: .05em;
+    text-transform: uppercase; color: var(--accent); line-height: 1.1; }
+  /* Le rang est l'ancrage visuel. Il était à 10px. */
+  .rank { font-size: 28px; font-weight: 700; line-height: 1.15; color: var(--nh-ink); }
+  .rank-soft { color: var(--accent); font-size: 24px; }
+
+  .bar { display: flex; gap: 3px; margin: var(--nh-s2) 0 var(--nh-s0); }
+  .bar i { height: 8px; flex: 1; min-width: 4px; border-radius: 2px; background: var(--nh-surface-2); }
+  .bar i.on { background: var(--accent);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 55%, transparent); }
+  .count { font-size: 13px; color: var(--nh-ink-dim); letter-spacing: .06em; }
+
+  .cat { display: flex; align-items: center; gap: var(--nh-s2);
+    min-height: 44px; margin-top: var(--nh-s3); border-top: 1px solid var(--nh-line-soft); }
+  .cat-other { color: var(--nh-ink-dim); }
+  .cbadge { width: 26px; height: 26px; flex: 0 0 26px; border-radius: 50%;
+    display: grid; place-items: center; font-size: 10px;
+    background: var(--nh-surface-2); color: var(--nh-ink-dim); }
+  .cname { flex: 1; font-size: 15px; font-weight: 500; }
+  .cstate { font-size: 13px; color: var(--nh-ink-dim); white-space: nowrap; }
+  .cstate.done { color: var(--nh-warn); }
+
+  .empty { padding: var(--nh-s5) 0; text-align: center; }
+  .empty-title { font-size: 18px; font-weight: 700; margin-bottom: var(--nh-s1); }
+  .empty-body { font-size: 14px; color: var(--nh-ink-muted); margin-bottom: var(--nh-s4); }
+  .empty-cta { display: inline-flex; align-items: center; min-height: 44px;
+    padding: 0 var(--nh-s3); border-radius: 8px; font-weight: 700; font-size: 14px;
+    color: var(--nh-surface-0); background: var(--nh-warn); text-decoration: none; }
+  .empty-cta:focus-visible { outline: 2px solid var(--nh-ink); outline-offset: 2px; }
+  .empty-sm { font-size: 13px; color: var(--nh-ink-dim); padding: var(--nh-s2) 0 var(--nh-s2) var(--nh-s4); }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>

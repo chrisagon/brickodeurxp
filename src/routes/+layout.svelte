@@ -21,17 +21,24 @@
   const roleHome = $derived(
     data.session ? (ROLE_HOME[data.session.user.role] ?? '/') : '/'
   );
+
+  // PROTOTYPE Néon HUD : thème appliqué au layout racine, scopé par RÔLE.
+  // Le plan prévoyait un scope par URL (/jeune/*), ce qui produisait une
+  // rupture visuelle dès que le jeune cliquait sur « Classement » ou
+  // « Profil ». Le scope par rôle supprime ce défaut : le jeune garde son
+  // thème partout, les autres rôles ne le voient jamais.
+  const isJeune = $derived(data.session?.user?.role === 'jeune');
 </script>
 
 <svelte:head>
   <link rel="manifest" href="/manifest.json" />
-  <meta name="theme-color" content="#f97316" />
+  <meta name="theme-color" content={isJeune ? '#07080f' : '#f97316'} />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="apple-touch-icon" href="/icons/icon-192.png" />
 </svelte:head>
 
-<div class="min-h-screen bg-gray-950 text-gray-100">
+<div class="min-h-screen {isJeune ? 'theme-jeune' : 'bg-gray-950 text-gray-100'}">
   {#if data.session}
     <nav class="border-b border-gray-800 px-4 py-2 flex flex-wrap items-center justify-between gap-y-1">
       <div class="flex items-center gap-5">

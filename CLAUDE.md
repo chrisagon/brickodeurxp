@@ -37,10 +37,7 @@ icm topics                                # list all topics
 
 ## Repository layout
 
-This directory contains two distinct projects:
-
-- **`brickodeurxp/`** — SvelteKit app (main active project, documented below)
-- **`BDC/`** — Legacy PHP app; see `BDC/CLAUDE.md` for its own guidance
+This repository is the SvelteKit app **brickodeurxp** itself (the repo root is the app root). A legacy PHP app, unrelated to this repo, lives outside it.
 
 ---
 
@@ -51,8 +48,6 @@ A skill-validation and badge-awarding platform for youth organisations. Built wi
 ### Commands
 
 ```bash
-cd brickodeurxp
-
 npm run dev          # local dev server (uses local D1/R2 via Wrangler)
 npm run build        # production build
 npm run preview      # preview production build locally
@@ -100,8 +95,19 @@ When an animateur approves a badge request, the system:
 3. If all skills are validated, awards a category badge.
 4. Badge level (blanc → jaune → orange → rouge → noir) is determined by how many category badges the jeune already holds in that domain.
 
-#### File storage (`src/lib/server/r2.ts`)
-Proof photos/videos are stored in R2 under `proofs/{jeuneId}/{skillId}/{timestamp}.{ext}`. Project files go under `projects/…`. Signed/public URLs are generated per-request.
+#### File storage (`src/lib/server/r2.ts`, `src/lib/server/r2-response.ts`)
+Proof photos/videos are stored in R2 under `proofs/{jeuneId}/{skillId}/{timestamp}.{ext}`. Project files go under `projects/…`. Objects are never served from a bucket URL: the proxy endpoints `api/proofs/[...key]` and `api/projects/[...key]` stream them, building their response per request.
+
+HTTP metadata for served objects is built by `r2-response.ts` (`r2Headers`), which both proxy endpoints use. Do not call `object.writeHttpMetadata(headers)` directly: in local dev Miniflare serialises arguments over an RPC bridge via `devalue`, which chokes on a native `Headers` object (500 only in dev). Build headers from the plain `object.httpMetadata` instead.
+
+#### Shared utils (`src/lib/utils/`)
+Framework-free helpers importable from both components and server code (no `event.platform.env` access):
+- `accent.ts` — `deriveAccent()` maps a domain DB colour to an accessible OKLCH accent (used by the Néon HUD theme, `--accent`).
+- `level.ts` — `LEVEL_COLORS`, `LEVEL_LABELS`, `LEVEL_IMAGES`, `calculateLevel()`: the single mapping of stored badge levels (`blanc`…`noir`) to UI visuals; the DB stores lowercase tokens, the UI renders display labels.
+- `skills.ts` — `groupSkillsByCategory()` / `uncategorizedSkills()`: category grouping that avoids per-category SQL queries (N+1).
+
+#### Design system
+`DESIGN.md` documents the design system: sections 1-9 (historical system) apply to animateur/parent/admin and public pages; section 10 defines **Néon HUD**, the dark game-like theme scoped to the `jeune` role — activated by `.theme-jeune` on the root layout (`src/routes/+layout.svelte`) when the session role is `jeune`, never by URL path. Deferred design work (e.g. motion rules, screen-reader audit) is tracked in `TODOS.md`.
 
 #### Email (`src/lib/server/email.ts`)
 Transactional email via Resend. `RESEND_API_KEY` must be set as a Wrangler secret for production. From address: `noreply@brickodeurs.fr`.
@@ -114,7 +120,7 @@ src/routes/
   animateur/      validations, badge, proposer, annuaire, messages, equipes, impression
   parent/         (read-only child view)
   admin/          domain/skill/user management
-  api/            server-side JSON endpoints (projects, proofs, assets)
+  api/            server-side JSON endpoints: projects (project files proxy, key-based), projects/[project_id]/tasks (team selection), proofs (proof files proxy, key-based)
   leaderboard/    public team leaderboard
   competences/    public skill catalogue
 ```
@@ -132,7 +138,7 @@ Sequential SQL files in `migrations/`. Always create a new numbered file; never 
 - Account ID: **cb06d1865b468ea4839f4f2b0a9e85b3**
 - Deploy workflow: **GitHub Actions** — `.github/workflows/deploy.yml` build + `wrangler pages deploy` à chaque push sur `main`
 - Bindings (dans `wrangler.toml`) : D1 `DB` = brickodeurxp, R2 `R2` = brickodeurxp-proofs
-- Secrets runtime (à définir côté Cloudflare, pas au build) : `RESEND_API_KEY`
+- Secrets runtime (à définir côté Cloudflare, pas au build) : `RESEND_API_KEY` (envoi email), `RESEND_FROM` (adresse expéditeur), `APP_URL` (lien de base des emails et de redirection magic-login)
 - Post-deploy health check: **Poll https://brickodeurxp.pages.dev jusqu'à HTTP 200**
 
 ### Déploiement

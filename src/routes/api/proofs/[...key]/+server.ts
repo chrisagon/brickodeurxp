@@ -1,5 +1,6 @@
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { r2Headers } from '$lib/server/r2-response';
 
 export const GET: RequestHandler = async ({ params, platform }) => {
   const key = params.key;
@@ -8,10 +9,9 @@ export const GET: RequestHandler = async ({ params, platform }) => {
   const object = await platform!.env.R2.get(`proofs/${key}`);
   if (!object) throw error(404, 'Fichier introuvable');
 
-  const headers = new Headers();
-  object.writeHttpMetadata(headers as unknown as Parameters<typeof object.writeHttpMetadata>[0]);
-  headers.set('etag', object.httpEtag);
-  headers.set('cache-control', 'private, max-age=3600');
-
-  return new Response(object.body as unknown as BodyInit, { headers });
+  // Ne pas utiliser object.writeHttpMetadata : elle échoue sous Miniflare,
+  // qui sérialise l'argument à travers un pont RPC. Voir r2-response.ts.
+  return new Response(object.body as unknown as BodyInit, {
+    headers: r2Headers(object, key),
+  });
 };
