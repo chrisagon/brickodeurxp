@@ -4,7 +4,7 @@ export const LEVEL_COLORS: Record<Level, string> = {
   blanc:  '#ffffff',
   jaune:  '#ffd700',
   orange: '#f97316',
-  rouge:  '#22c55e',
+  rouge:  '#dc2626',
   noir:   '#111111',
 };
 
@@ -12,7 +12,7 @@ export const LEVEL_LABELS: Record<Level, string> = {
   blanc:  'Blanc',
   jaune:  'Jaune',
   orange: 'Orange',
-  rouge:  'Vert',
+  rouge:  'Rouge',
   noir:   'Noir',
 };
 

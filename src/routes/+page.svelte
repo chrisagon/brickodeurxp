@@ -116,7 +116,7 @@
       { label: 'Blanc',  image: '/hexa_blanc.png',  badges: 1 },
       { label: 'Jaune',  image: '/hexa_jaune.png',  badges: 2 },
       { label: 'Orange', image: '/hexa_orange.png', badges: 3 },
-      { label: 'Vert',   image: '/hexa_vert.png',   badges: 4 },
+      { label: 'Rouge',  image: '/hexa_vert.png',   badges: 4 },
       { label: 'Noir',   image: '/hexa_noir.png',   badges: 5 },
     ] as belt}
       <div class="flex flex-col items-center gap-2 w-24">
