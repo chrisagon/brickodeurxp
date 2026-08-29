@@ -46,8 +46,10 @@ TalkBack Android), au-delà des points de repère ARIA spécifiés dans le plan.
 
 **Pourquoi.** Le lot 1 spécifie la navigation clavier, les anneaux de focus
 visibles et les points de repère ARIA. Il ne vérifie pas ce que le lecteur
-d'écran annonce réellement — notamment le rang, dont l'information passe par un
-hexagone PNG, et les glyphes d'état (`✓ ⏳ ✎ ✗ ○`) qui sont du texte décoratif.
+d'écran annonce réellement — notamment le rang (le SVG de `RangNiveau` porte
+désormais un `aria-label`, mais un lecteur réel reste le seul juge de l'annonce),
+et les glyphes d'état (`✓ ⏳ ✎ ✗ ○`) qui sont masqués aux lecteurs
+(`aria-hidden`) avec un texte d'état en `sr-only`.
 
 **Pour.** Les glyphes d'état lus littéralement produisent du bruit incompréhensible.
 Correction peu coûteuse une fois identifiée (`aria-label`, `aria-hidden`).
