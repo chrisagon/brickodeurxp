@@ -20,7 +20,10 @@ export const LEVEL_IMAGES: Record<Level, string> = {
   blanc:  '/hexa_blanc.png',
   jaune:  '/hexa_jaune.png',
   orange: '/hexa_orange.png',
-  rouge:  '/hexa_vert.png',
+  // Corrigé : pointait sur /hexa_vert.png après le renommage du niveau en
+  // « Rouge » (#dc2626). Le fichier hexa_rouge.png n'existait pas, l'asset a
+  // été créé en SVG. Voir tests/level-contract.test.ts.
+  rouge:  '/hexa_rouge.svg',
   noir:   '/hexa_noir.png',
 };
 

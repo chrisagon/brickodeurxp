@@ -2,7 +2,6 @@ import type { PageServerLoad } from './$types';
 import {
   getAllDomains,
   getCategoriesByDomain,
-  getSkillsByCategory,
   getSkillsByDomain,
   getBadgesByJeune,
   getCategoryBadge,
@@ -11,6 +10,8 @@ import {
 import { calculateLevel, LEVEL_IMAGES } from '$lib/utils/level';
 import type { Level } from '$lib/utils/level';
 import type { Category } from '$lib/server/db';
+import { groupSkillsByCategory, uncategorizedSkills } from '$lib/utils/skills';
+import { deriveAccent } from '$lib/utils/accent';
 
 type SkillState = {
   id: string;
@@ -37,6 +38,11 @@ type CategoryPasseport = {
 
 export type DomainPasseport = {
   domain: { id: string; name: string; color: string; icon: string };
+  /**
+   * Accent d'affichage dérivé de `domain.color`, calculé côté serveur.
+   * Toujours une couleur exploitable : `deriveAccent` est totale.
+   */
+  accent: string;
   categories: CategoryPasseport[];
   uncategorizedSkills: SkillState[];
   categoryBadgeCount: number;
@@ -86,13 +92,21 @@ export const load: PageServerLoad = async ({ locals, platform }) => {
   const passeport: DomainPasseport[] = [];
 
   for (const domain of domains) {
-    const categories = await getCategoriesByDomain(db, domain.id);
-    const allSkillsInDomain = await getSkillsByDomain(db, domain.id);
+    // Deux requêtes indépendantes : en parallèle plutôt qu'en série.
+    const [categories, allSkillsInDomain] = await Promise.all([
+      getCategoriesByDomain(db, domain.id),
+      getSkillsByDomain(db, domain.id),
+    ]);
+
+    // Correctif N+1 : `allSkillsInDomain` contient déjà toutes les compétences
+    // actives du domaine, triées par sort_order. Les regrouper en mémoire
+    // remplace un appel `getSkillsByCategory` par catégorie.
+    const skillsByCategoryId = groupSkillsByCategory(allSkillsInDomain);
 
     const categoriesList: CategoryPasseport[] = [];
 
     for (const cat of categories) {
-      const skills = await getSkillsByCategory(db, cat.id);
+      const skills = skillsByCategoryId.get(cat.id) ?? [];
       const badge = badgeByCategoryId.get(cat.id) ?? null;
 
       const skillStates: SkillState[] = skills.map((s) => {
@@ -132,7 +146,7 @@ export const load: PageServerLoad = async ({ locals, platform }) => {
     }
 
     // Compétences sans catégorie
-    const uncategorized = allSkillsInDomain.filter((s) => !s.category_id);
+    const uncategorized = uncategorizedSkills(allSkillsInDomain);
     const uncategorizedStates: SkillState[] = uncategorized.map((s) => {
       const isToComplete = toCompleteSkillIds.has(s.id) && !approvedSkillIds.has(s.id);
       const isRejected =
@@ -161,6 +175,7 @@ export const load: PageServerLoad = async ({ locals, platform }) => {
 
     passeport.push({
       domain,
+      accent: deriveAccent(domain.color),
       categories: categoriesList,
       uncategorizedSkills: uncategorizedStates,
       categoryBadgeCount,
