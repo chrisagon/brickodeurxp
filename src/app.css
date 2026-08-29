@@ -1,5 +1,69 @@
 @import "tailwindcss";
 
+/* ==========================================================================
+   PROTOTYPE Néon HUD — espace jeune uniquement (branche proto/neon-hud)
+   Jetons + restylage de la nav racine sous .theme-jeune.
+   Hors de .theme-jeune, rien ne change : animateur, parent, admin et les
+   pages publiques gardent le thème actuel à l'identique.
+   ========================================================================== */
+
+.theme-jeune {
+  /* Surfaces */
+  --nh-surface-0: #07080f;
+  --nh-surface-1: #0d1526;
+  --nh-surface-2: #111a2e;
+  /* Lignes */
+  --nh-line: #1d2b45;
+  --nh-line-soft: #141d33;
+  /* Encres */
+  --nh-ink: #ffffff;
+  --nh-ink-muted: #9fb0c9;
+  --nh-ink-dim: #7a8aa5;
+  /* Sémantiques */
+  --nh-ok: #4ade80;
+  --nh-warn: #ffd166;
+  /* Espacement (échelle à 6 pas) */
+  --nh-s0: 4px;
+  --nh-s1: 8px;
+  --nh-s2: 12px;
+  --nh-s3: 16px;
+  --nh-s4: 24px;
+  --nh-s5: 40px;
+
+  background-color: var(--nh-surface-0);
+  color: var(--nh-ink);
+}
+
+/* Le body n'a pas de fond : sans ça une bande noire apparaît sous le contenu
+   quand la page est plus courte que l'écran. */
+body:has(.theme-jeune) {
+  background-color: #07080f;
+}
+
+/* Nav racine : les classes Tailwind y sont écrites en dur, une classe parente
+   ne les repeint pas. On les écrase par sélecteurs descendants, scopés. */
+.theme-jeune nav {
+  border-color: var(--nh-line) !important;
+}
+.theme-jeune nav a,
+.theme-jeune nav button {
+  color: var(--nh-ink-muted) !important;
+}
+/* Marque, dans la nav racine : blanche, pas orange */
+.theme-jeune > nav a:first-child {
+  color: var(--nh-ink) !important;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+.theme-jeune nav a:hover,
+.theme-jeune nav button:hover {
+  color: var(--nh-ink) !important;
+}
+/* Onglet actif de la nav jeune (dans <main>) : accent chaud */
+.theme-jeune main nav a.text-orange-400 {
+  color: var(--nh-warn) !important;
+}
+
 /* Onboarding (driver.js) : popover thémé pour coller à l'UI sombre.
    driver.js pose un popover blanc par défaut (bg/text/bordures/boutons). */
 .driver-popover {
