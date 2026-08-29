@@ -61,22 +61,6 @@ Le reste de l'accessibilité est spécifié mais non vérifié.
 
 ---
 
-## Rupture visuelle hors de l'espace jeune
-
-**Quoi.** Quand un jeune clique sur « Classement » ou « Profil », il quitte
-`/jeune` et retrouve le thème gris et orange d'origine.
-
-**Pourquoi.** La décision de périmètre du plan limite `.theme-jeune` aux routes
-`/jeune/*` pour ne pas toucher les autres rôles. La rupture est assumée mais
-réelle, et ces deux liens sont dans la navigation permanente.
-
-**Pour.** Corriger rendrait le parcours jeune cohérent de bout en bout.
-
-**Contre.** Thématiser `/leaderboard` et `/profile` les expose à tous les rôles,
-ce que le lot 1 a explicitement voulu éviter.
-
-**Contexte.** Signalé par l'outside voice Codex en `/plan-eng-review`, confirmé en
-`/plan-design-review`. Décision : accepté pour ce lot.
-
-**Dépend de.** Le retour des jeunes sur le lot 1. Si la rupture les gêne, elle
-devient prioritaire.
+*Résolu depuis : la rupture visuelle hors de l'espace jeune a été supprimée par
+le scope du thème par rôle (`+layout.svelte` applique `.theme-jeune` dès que la
+session est un jeune, quelle que soit la route), plutôt que par chemin d'URL.*
