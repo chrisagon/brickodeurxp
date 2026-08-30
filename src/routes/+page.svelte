@@ -128,6 +128,25 @@
   </div>
 </section>
 
+<!-- VIDEO -->
+<section class="max-w-4xl mx-auto px-4 py-16">
+  <h2 class="text-2xl font-bold text-center text-white mb-2">Le projet en vidéo</h2>
+  <p class="text-center text-gray-400 mb-8">
+    Découvre le but du passeport — en deux minutes, pour les jeunes et les parents.
+  </p>
+  <div class="relative w-full aspect-video rounded-2xl overflow-hidden border border-orange-500/20 shadow-xl">
+    <iframe
+      src="https://www.youtube-nocookie.com/embed/4QPLcyWq2fo"
+      title="Le passeport numérique des Brickodeurs"
+      class="absolute inset-0 w-full h-full"
+      loading="lazy"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+      referrerpolicy="strict-origin-when-cross-origin"
+      allowfullscreen
+    ></iframe>
+  </div>
+</section>
+
 <!-- FOR PARENTS -->
 <section class="bg-gray-900/60 py-16">
   <div class="max-w-2xl mx-auto px-4 text-center">
