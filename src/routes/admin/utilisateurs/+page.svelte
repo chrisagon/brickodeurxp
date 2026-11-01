@@ -3,20 +3,21 @@
 
   let { data, form } = $props<{ data: PageData; form: ActionData }>();
 
+  // Libellés et couleurs viennent de $lib/utils/roles : ils étaient redéfinis
+  // ici sans le rôle `admin`, qui se serait affiché en brut une fois promu.
+  import {
+    ROLE_LABELS,
+    ROLE_COLORS,
+    allowedPromotions,
+    promotionWarning,
+    roleLabel,
+    type Role,
+  } from '$lib/utils/roles';
+
   let filterRole = $state<string>('all');
   let confirmDeleteId = $state<string | null>(null);
-
-  const ROLE_LABELS: Record<string, string> = {
-    jeune: 'Jeune',
-    animateur: 'Animateur',
-    parent: 'Parent',
-  };
-
-  const ROLE_COLORS: Record<string, string> = {
-    jeune: 'text-blue-400',
-    animateur: 'text-orange-400',
-    parent: 'text-purple-400',
-  };
+  /** Promotion en attente de confirmation, au format `userId:role`. */
+  let confirmPromote = $state<string | null>(null);
 
   let filtered = $derived(
     filterRole === 'all' ? data.users : data.users.filter((u: (typeof data.users)[number]) => u.role === filterRole)
@@ -27,6 +28,7 @@
     jeune: data.users.filter((u: (typeof data.users)[number]) => u.role === 'jeune').length,
     animateur: data.users.filter((u: (typeof data.users)[number]) => u.role === 'animateur').length,
     parent: data.users.filter((u: (typeof data.users)[number]) => u.role === 'parent').length,
+    admin: data.users.filter((u: (typeof data.users)[number]) => u.role === 'admin').length,
   });
 </script>
 
@@ -34,7 +36,7 @@
   <div class="flex items-center justify-between mb-6">
     <div>
       <h1 class="text-2xl font-bold text-orange-400">Utilisateurs</h1>
-      <p class="text-sm text-gray-400 mt-1">{data.users.length} comptes (hors admins)</p>
+      <p class="text-sm text-gray-400 mt-1">{data.users.length} compte{data.users.length > 1 ? 's' : ''}</p>
     </div>
     <a
       href="/admin/utilisateurs/export"
@@ -57,7 +59,7 @@
 
   <!-- Filtres -->
   <div class="flex gap-2 mb-5">
-    {#each [['all','Tous'], ['jeune','Jeunes'], ['animateur','Animateurs'], ['parent','Parents']] as [role, label]}
+    {#each [['all','Tous'], ['jeune','Jeunes'], ['animateur','Animateurs'], ['parent','Parents'], ['admin','Admins']] as [role, label]}
       <button
         onclick={() => (filterRole = role)}
         class="text-sm px-3 py-1.5 rounded-full transition-colors {filterRole === role
@@ -84,14 +86,50 @@
               <span class="font-medium text-gray-200">
                 {user.prenom} {user.nom}
               </span>
-              <span class="text-xs px-2 py-0.5 rounded-full bg-gray-800 {ROLE_COLORS[user.role]}">
-                {ROLE_LABELS[user.role] ?? user.role}
+              <span class="text-xs px-2 py-0.5 rounded-full bg-gray-800 {ROLE_COLORS[user.role as Role] ?? 'text-gray-400'}">
+                {roleLabel(user.role)}
               </span>
             </div>
             <div class="text-xs text-gray-500 mt-0.5">{user.email}</div>
           </div>
 
           <div class="flex items-center gap-2 shrink-0 ml-4">
+            <!-- Promotion. Irréversible : on confirme avant d'appliquer, en
+                 annonçant les effets de bord (équipes, liens parentaux). -->
+            {#each allowedPromotions(user.role) as target}
+              {#if confirmPromote === `${user.id}:${target}`}
+                <form method="POST" action="?/promoteUser" class="flex items-center gap-2">
+                  <input type="hidden" name="user_id" value={user.id} />
+                  <input type="hidden" name="new_role" value={target} />
+                  <span class="text-xs text-amber-400 max-w-xs text-right">
+                    {promotionWarning(user.role, target)}
+                  </span>
+                  <button
+                    type="submit"
+                    class="text-xs bg-amber-600 hover:bg-amber-500 text-white px-3 py-1.5 min-h-[40px] rounded-lg font-bold transition-colors whitespace-nowrap"
+                  >
+                    Confirmer
+                  </button>
+                  <button
+                    type="button"
+                    onclick={() => (confirmPromote = null)}
+                    class="text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-3 py-1.5 min-h-[40px] rounded-lg transition-colors"
+                  >
+                    Annuler
+                  </button>
+                </form>
+              {:else if confirmPromote === null && confirmDeleteId === null}
+                <button
+                  type="button"
+                  onclick={() => (confirmPromote = `${user.id}:${target}`)}
+                  class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 min-h-[40px] rounded-lg transition-colors whitespace-nowrap"
+                  title="Promouvoir {user.prenom} {user.nom} au rôle {roleLabel(target)}"
+                >
+                  → {roleLabel(target)}
+                </button>
+              {/if}
+            {/each}
+
             {#if confirmDeleteId === user.id}
               <form method="POST" action="?/deleteUser" class="flex items-center gap-2">
                 <input type="hidden" name="user_id" value={user.id} />
@@ -110,10 +148,12 @@
                   Annuler
                 </button>
               </form>
-            {:else}
+            {:else if user.role !== 'admin' && confirmPromote === null}
+              <!-- `deleteUser` refuse déjà les admins côté serveur ; on ne
+                   propose pas une action qui échouerait. -->
               <button
                 onclick={() => (confirmDeleteId = user.id)}
-                class="text-xs text-gray-600 hover:text-red-400 transition-colors px-2 py-1"
+                class="text-xs text-gray-600 hover:text-red-400 transition-colors px-2 py-1 min-h-[40px]"
                 title="Supprimer ce compte"
               >
                 ✕

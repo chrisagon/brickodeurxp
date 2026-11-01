@@ -1,4 +1,11 @@
 import type { D1Database } from '@cloudflare/workers-types';
+import {
+  canPromote,
+  isRole,
+  promotionSideEffects,
+  roleLabel,
+  type Role,
+} from '$lib/utils/roles';
 
 export type User = {
   id: string;
@@ -121,6 +128,62 @@ export async function getUserById(db: D1Database, id: string): Promise<User | nu
     .bind(id)
     .first<User>();
   return result ?? null;
+}
+
+/**
+ * Promeut un utilisateur, avec les effets de bord de son ancien rôle.
+ *
+ * La validation de la transition (`canPromote`) est faite par l'appelant, qui
+ * doit aussi vérifier que l'auteur est admin. Cette fonction la revérifie
+ * malgré tout : c'est le dernier rempart avant l'écriture.
+ *
+ * Tout passe par un `batch()` D1, donc une seule transaction implicite : soit
+ * le rôle change ET les liens sont coupés, soit rien ne change. Un rôle promu
+ * sans retrait d'équipe laisserait un animateur inscrit comme membre jeune.
+ *
+ * Badges et demandes de badge sont **conservés** : un badge obtenu est une
+ * réussite réelle.
+ */
+export async function promoteUser(
+  db: D1Database,
+  userId: string,
+  newRole: Role
+): Promise<{ from: Role; to: Role }> {
+  const target = await db
+    .prepare('SELECT id, role FROM users WHERE id = ?')
+    .bind(userId)
+    .first<{ id: string; role: string }>();
+
+  if (!target) throw new Error('Utilisateur introuvable');
+  if (!isRole(target.role)) throw new Error(`Rôle inattendu en base : ${target.role}`);
+  if (!canPromote(target.role, newRole)) {
+    throw new Error(`Promotion ${roleLabel(target.role)} → ${roleLabel(newRole)} non autorisée.`);
+  }
+
+  const from = target.role;
+  const fx = promotionSideEffects(from, newRole);
+
+  const statements = [
+    // `AND role = ?` : si le rôle a changé entre la lecture et l'écriture,
+    // la mise à jour n'agit pas — pas de promotion sur un état périmé.
+    db
+      .prepare('UPDATE users SET role = ? WHERE id = ? AND role = ?')
+      .bind(newRole, userId, from),
+  ];
+
+  if (fx.leaveTeams) {
+    statements.push(db.prepare('DELETE FROM team_members WHERE jeune_id = ?').bind(userId));
+  }
+  if (fx.dropParentLinks) {
+    statements.push(db.prepare('DELETE FROM parent_child WHERE parent_id = ?').bind(userId));
+  }
+
+  const results = await db.batch(statements);
+  if (results[0]?.meta?.changes === 0) {
+    throw new Error('Le rôle a changé entre-temps, réessayez.');
+  }
+
+  return { from, to: newRole };
 }
 
 export async function getUserPasswordHash(db: D1Database, id: string): Promise<string | null> {
@@ -484,6 +547,14 @@ const LEVEL_MAP: [number, Badge['level']][] = [
   [5, 'noir'], [4, 'rouge'], [3, 'orange'], [2, 'jaune'], [1, 'blanc'],
 ];
 
+/**
+ * Un animateur ne peut pas traiter sa propre demande de badge.
+ *
+ * Ce cas n'existait pas avant la promotion de rôle : un jeune promu animateur
+ * conserve ses demandes en cours et devient quelqu'un qui peut les valider.
+ */
+export const SELF_REVIEW_ERROR = 'Vous ne pouvez pas traiter votre propre demande.';
+
 export async function approveRequest(
   db: D1Database,
   requestId: string,
@@ -492,17 +563,21 @@ export async function approveRequest(
 ): Promise<Badge | null> {
   const now = Math.floor(Date.now() / 1000);
 
-  // UPDATE atomique — n'agit que si status='pending'
+  // UPDATE atomique — n'agit que si status='pending' ET si le relecteur n'est
+  // pas l'auteur de la demande. La garde est dans le WHERE, pas dans un SELECT
+  // préalable : un contrôle séparé laisserait une fenêtre de course entre la
+  // vérification et l'écriture.
   const updateResult = await db
     .prepare(
-      'UPDATE badge_requests SET status = ?, reviewer_id = ?, reviewer_comment = ?, reviewed_at = ? WHERE id = ? AND status = ?'
+      'UPDATE badge_requests SET status = ?, reviewer_id = ?, reviewer_comment = ?, reviewed_at = ? WHERE id = ? AND status = ? AND jeune_id != ?'
     )
-    .bind('approved', reviewerId, comment || null, now, requestId, 'pending')
+    .bind('approved', reviewerId, comment || null, now, requestId, 'pending', reviewerId)
     .run();
 
   if (updateResult.meta.changes === 0) {
     const existing = await getRequestById(db, requestId);
     if (!existing) throw new Error('Demande introuvable');
+    if (existing.jeune_id === reviewerId) throw new Error(SELF_REVIEW_ERROR);
     throw new Error('Demande déjà traitée');
   }
 
@@ -594,14 +669,16 @@ export async function rejectRequest(
   const now = Math.floor(Date.now() / 1000);
   const updateResult = await db
     .prepare(
-      'UPDATE badge_requests SET status = ?, reviewer_id = ?, reviewer_comment = ?, reviewed_at = ? WHERE id = ? AND status = ?'
+      // `AND jeune_id != ?` : garde anti-auto-validation, voir SELF_REVIEW_ERROR.
+      'UPDATE badge_requests SET status = ?, reviewer_id = ?, reviewer_comment = ?, reviewed_at = ? WHERE id = ? AND status = ? AND jeune_id != ?'
     )
-    .bind('rejected', reviewerId, comment || null, now, requestId, 'pending')
+    .bind('rejected', reviewerId, comment || null, now, requestId, 'pending', reviewerId)
     .run();
 
   if (updateResult.meta.changes === 0) {
     const existing = await getRequestById(db, requestId);
     if (!existing) throw new Error('Demande introuvable');
+    if (existing.jeune_id === reviewerId) throw new Error(SELF_REVIEW_ERROR);
     throw new Error('Demande déjà traitée');
   }
 }
@@ -616,14 +693,16 @@ export async function requestCompletion(
   const now = Math.floor(Date.now() / 1000);
   const updateResult = await db
     .prepare(
-      'UPDATE badge_requests SET status = ?, reviewer_id = ?, reviewer_comment = ?, reviewed_at = ? WHERE id = ? AND status = ?'
+      // `AND jeune_id != ?` : garde anti-auto-validation, voir SELF_REVIEW_ERROR.
+      'UPDATE badge_requests SET status = ?, reviewer_id = ?, reviewer_comment = ?, reviewed_at = ? WHERE id = ? AND status = ? AND jeune_id != ?'
     )
-    .bind('to_complete', reviewerId, comment, now, requestId, 'pending')
+    .bind('to_complete', reviewerId, comment, now, requestId, 'pending', reviewerId)
     .run();
 
   if (updateResult.meta.changes === 0) {
     const existing = await getRequestById(db, requestId);
     if (!existing) throw new Error('Demande introuvable');
+    if (existing.jeune_id === reviewerId) throw new Error(SELF_REVIEW_ERROR);
     throw new Error('Demande déjà traitée');
   }
 }
