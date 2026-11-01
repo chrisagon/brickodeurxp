@@ -4,7 +4,10 @@
 
 <div class="max-w-4xl mx-auto">
   <nav class="flex flex-wrap gap-4 mb-6 border-b border-gray-800 pb-3">
-    <a href="/competences"        class="text-sm text-gray-400 hover:text-orange-400">Compétences</a>
+    <!-- /admin/competences, pas /competences : cette derniere est la route
+         publique, hors du layout admin. Y envoyer l'admin lui faisait perdre
+         toute cette barre de navigation. -->
+    <a href="/admin/competences"  class="text-sm text-gray-400 hover:text-orange-400">Compétences</a>
     <a href="/admin/propositions" class="text-sm text-gray-400 hover:text-orange-400">Propositions</a>
     <a href="/admin/animateurs"   class="text-sm text-gray-400 hover:text-orange-400">Animateurs</a>
     <a href="/admin/utilisateurs" class="text-sm text-gray-400 hover:text-orange-400">Utilisateurs</a>

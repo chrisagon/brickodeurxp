@@ -3,8 +3,6 @@ import type { Actions, PageServerLoad } from './$types';
 import {
   getProjectById,
   getTasksByProject,
-  getAllDomains,
-  getSkillsByDomain,
   updateProject,
   deleteProject,
 } from '$lib/server/db';
@@ -28,15 +26,12 @@ export const load: PageServerLoad = async ({ params, platform, locals }) => {
 
   const tasks = await getTasksByProject(db, params.id);
 
-  // Récupérer les compétences du domaine de l'équipe
-  const domains = await getAllDomains(db);
-  const skillsByDomain = new Map<string, any[]>();
-  for (const domain of domains) {
-    const skills = await getSkillsByDomain(db, domain.id);
-    skillsByDomain.set(domain.id, skills);
-  }
-
-  return { project, tasks, skillsByDomain };
+  // `domains` et `skillsByDomain` étaient chargés ici — une requête par
+  // domaine, en série — mais la vue ne les lit jamais. Le correctif du N+1
+  // n'est pas de l'optimiser, c'est de le supprimer. La liste des
+  // compétences sert à la création de tâche, qui la charge pour son compte
+  // (`tasks/new/+page.server.ts`).
+  return { project, tasks };
 };
 
 export const actions: Actions = {

@@ -1,6 +1,7 @@
 import { redirect, error } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
-import { getProjectById, getAllDomains, getSkillsByDomain, createTask } from '$lib/server/db';
+import { getProjectById, getAllDomains, getAllActiveSkills, createTask } from '$lib/server/db';
+import { groupSkillsByDomain } from '$lib/utils/skills';
 
 function requireAdmin(locals: App.Locals) {
   if (locals.session?.user.role !== 'admin') {
@@ -18,12 +19,16 @@ export const load: PageServerLoad = async ({ params, platform, locals }) => {
     error(404, 'Projet introuvable.');
   }
 
-  // Récupérer toutes les compétences
-  const domains = await getAllDomains(db);
-  const skillsByDomain: Map<string, any[]> = new Map();
+  // Correctif N+1 : `getSkillsByDomain` était appelée une fois par domaine,
+  // en série. Deux requêtes parallèles suffisent, puis on regroupe en
+  // mémoire. Le coût ne dépend plus du nombre de domaines.
+  const [domains, allSkills] = await Promise.all([getAllDomains(db), getAllActiveSkills(db)]);
+  const skillsByDomain = groupSkillsByDomain(allSkills);
+
+  // La vue fait `skillsByDomain.get(domain.id) ?? []`, mais on garantit une
+  // entrée par domaine pour que la Map reste le reflet exact de l'ancienne.
   for (const domain of domains) {
-    const skills = await getSkillsByDomain(db, domain.id);
-    skillsByDomain.set(domain.id, skills);
+    if (!skillsByDomain.has(domain.id)) skillsByDomain.set(domain.id, []);
   }
 
   return { project, domains: domains ?? [], skillsByDomain };

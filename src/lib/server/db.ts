@@ -286,6 +286,23 @@ export async function deleteCategory(db: D1Database, id: string): Promise<void> 
 
 // ── Skills ────────────────────────────────────────────────────────────────────
 
+/**
+ * Toutes les compétences actives, tous domaines confondus, en une requête.
+ *
+ * Évite d'appeler `getSkillsByDomain` dans une boucle sur les domaines :
+ * l'appelant regroupe le résultat avec `groupSkillsByDomain`. Mêmes filtre
+ * (`active = 1`) et tri (`sort_order`) que `getSkillsByDomain`, donc le
+ * regroupement produit exactement la même répartition.
+ */
+export async function getAllActiveSkills(db: D1Database): Promise<Skill[]> {
+  const result = await db
+    .prepare(
+      'SELECT id, domain_id, category_id, title, description, sort_order, active FROM skills WHERE active = 1 ORDER BY domain_id, sort_order'
+    )
+    .all<Skill>();
+  return result.results;
+}
+
 export async function getSkillsByDomain(db: D1Database, domainId: string): Promise<Skill[]> {
   const result = await db
     .prepare('SELECT id, domain_id, category_id, title, description, sort_order, active FROM skills WHERE domain_id = ? AND active = 1 ORDER BY sort_order')

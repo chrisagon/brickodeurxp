@@ -39,6 +39,37 @@ export function groupSkillsByCategory<T extends GroupableSkill>(skills: readonly
   return byCategory;
 }
 
+/** Forme minimale pour le regroupement par domaine. */
+export interface DomainScopedSkill {
+  domain_id?: string | null;
+}
+
+/**
+ * Regroupe des compétences par `domain_id`.
+ *
+ * Même motivation que `groupSkillsByCategory` : `admin/projets/[id]` appelait
+ * `getSkillsByDomain` une fois par domaine, dans une boucle. Charger toutes
+ * les compétences actives en une requête puis les regrouper ici supprime la
+ * boucle de requêtes.
+ *
+ * @returns une Map dont les valeurs conservent l'ordre d'entrée.
+ */
+export function groupSkillsByDomain<T extends DomainScopedSkill>(
+  skills: readonly T[]
+): Map<string, T[]> {
+  const byDomain = new Map<string, T[]>();
+  if (!Array.isArray(skills)) return byDomain;
+
+  for (const skill of skills) {
+    const id = skill?.domain_id;
+    if (!id) continue;
+    const bucket = byDomain.get(id);
+    if (bucket) bucket.push(skill);
+    else byDomain.set(id, [skill]);
+  }
+  return byDomain;
+}
+
 /**
  * Compétences sans catégorie, dans l'ordre d'entrée.
  * Contrepartie exacte de `groupSkillsByCategory` : toute compétence est dans

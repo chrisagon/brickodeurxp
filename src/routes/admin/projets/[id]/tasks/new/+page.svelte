@@ -77,7 +77,10 @@
                         }}
                         class="mt-1 w-4 h-4 text-orange-600 bg-gray-700 border-gray-600 rounded focus:ring-orange-500 focus:ring-2"
                       />
-                      <span class="text-sm text-gray-300">{skill.skill_title}</span>
+                      <!-- Le champ est `title` ; `skill_title` n'existe pas sur
+                           Skill et rendait un libellé vide. Le typage en any[]
+                           de skillsByDomain masquait l'erreur. -->
+                      <span class="text-sm text-gray-300">{skill.title}</span>
                     </label>
                   {/each}
                 </div>
