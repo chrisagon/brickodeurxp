@@ -8,6 +8,8 @@
     <a href="/admin/propositions" class="text-sm text-gray-400 hover:text-orange-400">Propositions</a>
     <a href="/admin/animateurs"   class="text-sm text-gray-400 hover:text-orange-400">Animateurs</a>
     <a href="/admin/utilisateurs" class="text-sm text-gray-400 hover:text-orange-400">Utilisateurs</a>
+    <a href="/admin/equipes"      class="text-sm text-gray-400 hover:text-orange-400">Équipes</a>
+    <a href="/admin/projets"      class="text-sm text-gray-400 hover:text-orange-400">Projets</a>
     <a href="/admin/utilisateurs/export" class="text-sm text-gray-500 hover:text-green-400 ml-auto">⬇ Export CSV</a>
   </nav>
   {@render children()}
